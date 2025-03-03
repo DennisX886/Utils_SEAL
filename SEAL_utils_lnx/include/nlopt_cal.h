@@ -15,7 +15,7 @@ double objective(const std::vector<double> &params, std::vector<double> &grad, v
     double index_of_max=0;
     for(double x=0.9;x<=1.2;x+=(1.2-0.9)/1000)//分为1000项
     {
-        double poly_value = a*x+b*x*x+c*x*x*x;//多项式
+        double poly_value = a*(x-1)+b*(x-1)*(x-1)+c*(x-1)*(x-1)*(x-1);//多项式
         double error = abs(log(x)-poly_value);//每一项误差
         if(error>max_error)
         {

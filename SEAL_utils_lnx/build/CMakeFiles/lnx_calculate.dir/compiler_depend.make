@@ -26,6 +26,7 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
   /usr/include/c++/11/bits/basic_string.tcc \
   /usr/include/c++/11/bits/char_traits.h \
   /usr/include/c++/11/bits/charconv.h \
+  /usr/include/c++/11/bits/codecvt.h \
   /usr/include/c++/11/bits/concept_check.h \
   /usr/include/c++/11/bits/cpp_type_traits.h \
   /usr/include/c++/11/bits/cxxabi_forced.h \
@@ -35,6 +36,7 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
   /usr/include/c++/11/bits/exception.h \
   /usr/include/c++/11/bits/exception_defines.h \
   /usr/include/c++/11/bits/exception_ptr.h \
+  /usr/include/c++/11/bits/fstream.tcc \
   /usr/include/c++/11/bits/functexcept.h \
   /usr/include/c++/11/bits/functional_hash.h \
   /usr/include/c++/11/bits/hash_bytes.h \
@@ -127,6 +129,7 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
   /usr/include/c++/11/ext/numeric_traits.h \
   /usr/include/c++/11/ext/string_conversions.h \
   /usr/include/c++/11/ext/type_traits.h \
+  /usr/include/c++/11/fstream \
   /usr/include/c++/11/functional \
   /usr/include/c++/11/initializer_list \
   /usr/include/c++/11/ios \
@@ -181,6 +184,7 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
   /usr/include/errno.h \
   /usr/include/features-time64.h \
   /usr/include/features.h \
+  /usr/include/linux/close_range.h \
   /usr/include/linux/errno.h \
   /usr/include/locale.h \
   /usr/include/math.h \
@@ -193,20 +197,25 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
   /usr/include/string.h \
   /usr/include/strings.h \
   /usr/include/time.h \
+  /usr/include/unistd.h \
   /usr/include/wchar.h \
   /usr/include/wctype.h \
   /usr/include/x86_64-linux-gnu/asm/errno.h \
   /usr/include/x86_64-linux-gnu/bits/atomic_wide_counter.h \
   /usr/include/x86_64-linux-gnu/bits/byteswap.h \
+  /usr/include/x86_64-linux-gnu/bits/confname.h \
   /usr/include/x86_64-linux-gnu/bits/cpu-set.h \
   /usr/include/x86_64-linux-gnu/bits/endian.h \
   /usr/include/x86_64-linux-gnu/bits/endianness.h \
+  /usr/include/x86_64-linux-gnu/bits/environments.h \
   /usr/include/x86_64-linux-gnu/bits/errno.h \
   /usr/include/x86_64-linux-gnu/bits/floatn-common.h \
   /usr/include/x86_64-linux-gnu/bits/floatn.h \
   /usr/include/x86_64-linux-gnu/bits/flt-eval-method.h \
   /usr/include/x86_64-linux-gnu/bits/fp-fast.h \
   /usr/include/x86_64-linux-gnu/bits/fp-logb.h \
+  /usr/include/x86_64-linux-gnu/bits/getopt_core.h \
+  /usr/include/x86_64-linux-gnu/bits/getopt_posix.h \
   /usr/include/x86_64-linux-gnu/bits/iscanonical.h \
   /usr/include/x86_64-linux-gnu/bits/libc-header-start.h \
   /usr/include/x86_64-linux-gnu/bits/libm-simd-decl-stubs.h \
@@ -216,6 +225,7 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
   /usr/include/x86_64-linux-gnu/bits/mathcalls-helper-functions.h \
   /usr/include/x86_64-linux-gnu/bits/mathcalls-narrow.h \
   /usr/include/x86_64-linux-gnu/bits/mathcalls.h \
+  /usr/include/x86_64-linux-gnu/bits/posix_opt.h \
   /usr/include/x86_64-linux-gnu/bits/pthread_stack_min-dynamic.h \
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h \
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h \
@@ -260,14 +270,17 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
   /usr/include/x86_64-linux-gnu/bits/types/wint_t.h \
   /usr/include/x86_64-linux-gnu/bits/typesizes.h \
   /usr/include/x86_64-linux-gnu/bits/uintn-identity.h \
+  /usr/include/x86_64-linux-gnu/bits/unistd_ext.h \
   /usr/include/x86_64-linux-gnu/bits/waitflags.h \
   /usr/include/x86_64-linux-gnu/bits/waitstatus.h \
   /usr/include/x86_64-linux-gnu/bits/wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/c++/11/bits/atomic_word.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/basic_file.h \
   /usr/include/x86_64-linux-gnu/c++/11/bits/c++allocator.h \
   /usr/include/x86_64-linux-gnu/c++/11/bits/c++config.h \
+  /usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h \
   /usr/include/x86_64-linux-gnu/c++/11/bits/c++locale.h \
   /usr/include/x86_64-linux-gnu/c++/11/bits/cpu_defines.h \
   /usr/include/x86_64-linux-gnu/c++/11/bits/ctype_base.h \
@@ -487,8 +500,6 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
 
 /usr/local/include/SEAL-4.1/seal/context.h:
 
-/usr/local/include/SEAL-4.1/seal/ckks.h:
-
 /usr/local/include/SEAL-4.1/gsl/util:
 
 /usr/local/include/SEAL-4.1/gsl/assert:
@@ -552,8 +563,6 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
 /usr/lib/gcc/x86_64-linux-gnu/11/include/ia32intrin.h:
 
 /usr/lib/gcc/x86_64-linux-gnu/11/include/gfniintrin.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/11/include/fmaintrin.h:
 
 /usr/lib/gcc/x86_64-linux-gnu/11/include/f16cintrin.h:
 
@@ -641,7 +650,13 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
 
 /usr/include/x86_64-linux-gnu/c++/11/bits/c++locale.h:
 
+/usr/include/x86_64-linux-gnu/c++/11/bits/c++io.h:
+
 /usr/include/x86_64-linux-gnu/c++/11/bits/c++allocator.h:
+
+/usr/local/include/SEAL-4.1/seal/ckks.h:
+
+/usr/include/x86_64-linux-gnu/c++/11/bits/basic_file.h:
 
 /usr/include/x86_64-linux-gnu/c++/11/bits/atomic_word.h:
 
@@ -653,17 +668,29 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
 
 /usr/include/x86_64-linux-gnu/bits/waitflags.h:
 
+/usr/include/x86_64-linux-gnu/bits/unistd_ext.h:
+
 /usr/include/x86_64-linux-gnu/bits/uintn-identity.h:
 
-/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vnnivlintrin.h:
+/usr/include/x86_64-linux-gnu/bits/types/wint_t.h:
 
-/usr/include/c++/11/ext/type_traits.h:
+/usr/include/x86_64-linux-gnu/bits/types/timer_t.h:
 
-/usr/include/c++/11/pstl/glue_memory_defs.h:
+/usr/include/x86_64-linux-gnu/bits/types/time_t.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/11/include/vpclmulqdqintrin.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/struct_timeval.h:
+
+/usr/local/include/SEAL-4.1/seal/encryptionparams.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/struct_itimerspec.h:
 
 /usr/lib/gcc/x86_64-linux-gnu/11/include/fxsrintrin.h:
 
 /usr/include/c++/11/bits/cxxabi_forced.h:
+
+/usr/include/c++/11/fstream:
 
 /usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vpopcntdqvlintrin.h:
 
@@ -674,6 +701,8 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
 /usr/lib/gcc/x86_64-linux-gnu/11/include/stdarg.h:
 
 /usr/include/c++/11/debug/assertions.h:
+
+/usr/include/linux/close_range.h:
 
 /usr/include/c++/11/cstdlib:
 
@@ -791,12 +820,6 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
 
 /usr/include/c++/11/bits/refwrap.h:
 
-/usr/include/c++/11/ctime:
-
-/usr/local/include/SEAL-4.1/seal/util/polycore.h:
-
-/usr/include/x86_64-linux-gnu/bits/time64.h:
-
 /usr/include/c++/11/bits/charconv.h:
 
 /usr/include/c++/11/bits/functional_hash.h:
@@ -805,19 +828,15 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
 
 /usr/include/c++/11/tr1/hypergeometric.tcc:
 
-/usr/include/c++/11/bits/stl_algobase.h:
+/usr/include/c++/11/ext/numeric_traits.h:
 
-/usr/include/c++/11/cwchar:
+/usr/local/include/SEAL-4.1/seal/util/mempool.h:
 
-/usr/include/c++/11/bits/basic_string.tcc:
+/usr/include/c++/11/bits/atomic_base.h:
 
-/usr/include/c++/11/bits/allocator.h:
+/usr/lib/gcc/x86_64-linux-gnu/11/include/tmmintrin.h:
 
-/usr/include/c++/11/cmath:
-
-/usr/include/c++/11/bits/stl_raw_storage_iter.h:
-
-/usr/include/x86_64-linux-gnu/bits/endian.h:
+/usr/include/c++/11/bits/unordered_map.h:
 
 /usr/include/c++/11/bits/uniform_int_dist.h:
 
@@ -829,7 +848,31 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
 
 /usr/include/c++/11/cwctype:
 
+/usr/include/x86_64-linux-gnu/bits/types/struct_sched_param.h:
+
+/usr/include/asm-generic/errno.h:
+
 /usr/include/c++/11/tr1/ell_integral.tcc:
+
+/usr/include/c++/11/cwchar:
+
+/usr/include/c++/11/bits/basic_string.tcc:
+
+/usr/include/c++/11/ctime:
+
+/usr/local/include/SEAL-4.1/seal/util/polycore.h:
+
+/usr/include/x86_64-linux-gnu/bits/time64.h:
+
+/usr/include/c++/11/bits/std_function.h:
+
+/usr/include/c++/11/bits/stl_tempbuf.h:
+
+/usr/include/c++/11/bits/stl_algo.h:
+
+/usr/include/x86_64-linux-gnu/bits/math-vector.h:
+
+/usr/include/c++/11/bits/locale_classes.tcc:
 
 /usr/lib/gcc/x86_64-linux-gnu/11/include/xopintrin.h:
 
@@ -858,6 +901,8 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
 /usr/include/c++/11/bits/align.h:
 
 /usr/include/c++/11/vector:
+
+/usr/include/x86_64-linux-gnu/bits/getopt_core.h:
 
 /home/dennisx/DennisX/SEAL_utils_lnx/src/main.cpp:
 
@@ -893,10 +938,6 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
 
 /usr/include/c++/11/bits/stl_heap.h:
 
-/usr/include/x86_64-linux-gnu/c++/11/bits/os_defines.h:
-
-/usr/include/c++/11/bits/exception_defines.h:
-
 /usr/lib/gcc/x86_64-linux-gnu/11/include/adxintrin.h:
 
 /usr/include/c++/11/atomic:
@@ -906,12 +947,6 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
 /usr/local/include/SEAL-4.1/gsl/byte:
 
 /usr/include/asm-generic/errno-base.h:
-
-/usr/local/include/SEAL-4.1/seal/util/mempool.h:
-
-/usr/include/c++/11/bits/atomic_base.h:
-
-/usr/include/c++/11/ext/numeric_traits.h:
 
 /usr/include/c++/11/bits/stl_map.h:
 
@@ -949,16 +984,6 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
 
 /usr/include/c++/11/tr1/poly_hermite.tcc:
 
-/usr/include/c++/11/bits/std_function.h:
-
-/usr/include/c++/11/bits/stl_tempbuf.h:
-
-/usr/include/c++/11/bits/stl_algo.h:
-
-/usr/include/x86_64-linux-gnu/bits/math-vector.h:
-
-/usr/include/c++/11/bits/locale_classes.tcc:
-
 /usr/include/c++/11/bits/specfun.h:
 
 /usr/local/include/SEAL-4.1/seal/util/streambuf.h:
@@ -976,6 +1001,24 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
 /usr/include/c++/11/bits/cpp_type_traits.h:
 
 /usr/include/c++/11/bits/std_thread.h:
+
+/usr/include/c++/11/bits/allocator.h:
+
+/usr/include/c++/11/cmath:
+
+/usr/include/c++/11/bits/stl_raw_storage_iter.h:
+
+/usr/include/x86_64-linux-gnu/bits/endian.h:
+
+/usr/local/include/SEAL-4.1/seal/memorymanager.h:
+
+/usr/include/x86_64-linux-gnu/c++/11/bits/opt_random.h:
+
+/usr/include/c++/11/bits/basic_ios.tcc:
+
+/usr/include/c++/11/bits/codecvt.h:
+
+/usr/include/c++/11/bits/enable_special_members.h:
 
 /usr/include/c++/11/bits/istream.tcc:
 
@@ -998,6 +1041,8 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
 /usr/include/c++/11/bits/this_thread_sleep.h:
 
 /usr/include/c++/11/bits/locale_facets.tcc:
+
+/usr/include/c++/11/bits/fstream.tcc:
 
 /usr/include/c++/11/bits/functexcept.h:
 
@@ -1049,21 +1094,11 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
 
 /usr/include/c++/11/bits/predefined_ops.h:
 
-/usr/lib/gcc/x86_64-linux-gnu/11/include/tmmintrin.h:
+/usr/lib/gcc/x86_64-linux-gnu/11/include/avx512vnnivlintrin.h:
 
-/usr/include/c++/11/bits/unordered_map.h:
+/usr/include/c++/11/ext/type_traits.h:
 
-/usr/include/asm-generic/errno.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/struct_sched_param.h:
-
-/usr/local/include/SEAL-4.1/seal/memorymanager.h:
-
-/usr/include/x86_64-linux-gnu/c++/11/bits/opt_random.h:
-
-/usr/include/c++/11/bits/enable_special_members.h:
-
-/usr/include/c++/11/bits/basic_ios.tcc:
+/usr/include/c++/11/pstl/glue_memory_defs.h:
 
 /usr/local/include/SEAL-4.1/seal/relinkeys.h:
 
@@ -1090,8 +1125,6 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
 /usr/include/c++/11/bits/algorithmfwd.h:
 
 /usr/include/c++/11/pstl/execution_defs.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/time_t.h:
 
 /usr/lib/gcc/x86_64-linux-gnu/11/include/cldemoteintrin.h:
 
@@ -1175,9 +1208,9 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
 
 /usr/include/c++/11/bits/ptr_traits.h:
 
-/usr/include/c++/11/bits/erase_if.h:
-
 /usr/include/endian.h:
+
+/usr/include/c++/11/bits/erase_if.h:
 
 /usr/include/stdint.h:
 
@@ -1187,6 +1220,14 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
 
 /usr/include/string.h:
 
+/usr/include/c++/11/bits/stl_algobase.h:
+
+/usr/include/unistd.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h:
+
+/usr/include/x86_64-linux-gnu/bits/stdint-uintn.h:
+
 /usr/include/sched.h:
 
 /usr/include/wctype.h:
@@ -1195,15 +1236,19 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
 
 /usr/include/x86_64-linux-gnu/asm/errno.h:
 
-/usr/lib/gcc/x86_64-linux-gnu/11/include/vpclmulqdqintrin.h:
+/usr/lib/gcc/x86_64-linux-gnu/11/include/fmaintrin.h:
 
-/usr/include/x86_64-linux-gnu/bits/types/struct_timeval.h:
+/usr/include/x86_64-linux-gnu/bits/confname.h:
 
 /usr/include/x86_64-linux-gnu/bits/cpu-set.h:
 
-/usr/include/x86_64-linux-gnu/bits/floatn-common.h:
+/usr/include/x86_64-linux-gnu/c++/11/bits/os_defines.h:
 
-/usr/include/x86_64-linux-gnu/bits/types/wint_t.h:
+/usr/include/c++/11/bits/exception_defines.h:
+
+/usr/include/x86_64-linux-gnu/bits/environments.h:
+
+/usr/include/x86_64-linux-gnu/bits/floatn-common.h:
 
 /usr/local/include/nlopt.hpp:
 
@@ -1212,10 +1257,6 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
 /usr/include/c++/11/iterator:
 
 /usr/include/x86_64-linux-gnu/bits/floatn.h:
-
-/usr/local/include/SEAL-4.1/seal/encryptionparams.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/struct_itimerspec.h:
 
 /usr/include/x86_64-linux-gnu/bits/flt-eval-method.h:
 
@@ -1245,11 +1286,15 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
 
 /usr/include/x86_64-linux-gnu/bits/mathcalls-narrow.h:
 
+/usr/include/x86_64-linux-gnu/bits/posix_opt.h:
+
 /usr/include/c++/11/ext/alloc_traits.h:
 
 /usr/include/x86_64-linux-gnu/bits/sched.h:
 
 /usr/include/time.h:
+
+/usr/include/x86_64-linux-gnu/bits/getopt_posix.h:
 
 /usr/include/x86_64-linux-gnu/bits/setjmp.h:
 
@@ -1277,9 +1322,9 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
 
 /usr/include/x86_64-linux-gnu/bits/types/clock_t.h:
 
-/usr/include/c++/11/bits/stl_bvector.h:
-
 /usr/include/x86_64-linux-gnu/bits/types/struct___jmp_buf_tag.h:
+
+/usr/include/c++/11/bits/stl_bvector.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/clockid_t.h:
 
@@ -1292,9 +1337,3 @@ CMakeFiles/lnx_calculate.dir/src/main.cpp.o: /home/dennisx/DennisX/SEAL_utils_ln
 /usr/lib/gcc/x86_64-linux-gnu/11/include/uintrintrin.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/mbstate_t.h:
-
-/usr/include/x86_64-linux-gnu/bits/stdint-uintn.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/timer_t.h:

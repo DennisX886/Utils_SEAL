@@ -3,6 +3,7 @@
 #include<iostream>
 #include<vector>
 #include<cmath>
+#include<fstream>
  
 using namespace std;
 using namespace seal;
@@ -16,8 +17,8 @@ using namespace seal;
         void encrypt_input(double x,int kind):变量加密函数，可以将输入变量x加密为密文。输入值为初始输入值x和模式kind.需要注意的是，只能用于加密x变量，不能用于加密其他变量。
         void decrypt_result(Ciphertext c_r,int kind):结果解密函数，可以将密文解密，并打印。输入值为密文c_r和模式kind.
         void decrypt_check(Ciphertext c,string name):变量解密函数，可以解密任意密文并打印结果，用于检查加密情况。输入值为密文c和密文名称name.
-        bool sign_approx(Ciphertext encrypted):正负判断函数，可以判断输入变量是否为正数，如果为正数则返回true,如果为0或者负数则返回false。输入值为密文encrypted.
-        void lnx_cal(Ciphertext c_r,int kind):lnx计算函数，可以根据输入值近似计算并打印对应lnx的值。输入值为密文c_r和模式kind.
+        bool sign_approx(Ciphertext encrypted):正负判断函数，可以判断输入变量是否为正数，如果为正数则返回true,如果为0或者负数则返回false。输入值为密文encrypted.//删除弃用
+        void lnx_cal(Ciphertext c_m,Ciphertext c_i,int kind):lnx计算函数，可以根据输入值近似计算并打印对应lnx的值。输入值为密文c_m\c_i和模式kind.
         void lnx_compare(double x):lnx计算结果比较函数，可以计算真实结果和相对误差，并打印。输入值为初始输入值x.
     
 
@@ -28,6 +29,7 @@ class utils
    private:
     EncryptionParameters *p_parms;
     size_t poly_modulus_degree=8192;
+    //size_t poly_modulus_degree_2=16284;
     SEALContext * p_context ;//上下文指针
     KeyGenerator * p_keygen;//密钥生成器指针
     Encryptor * p_encryptor;//加密器指针
@@ -37,30 +39,41 @@ class utils
     PublicKey public_key;//公钥
     RelinKeys relin_keys;//线性化密钥
     double scale;//缩放因子
-    double sign_poly_coeff=0.763546;//比较大小参数
-    const vector<int> lnx_poly_coeffs = {50,30,30,30,50};//系数模数
+   // double sign_poly_coeff=0.763546;//比较大小参数
+    const vector<int> poly_coeffs = {49,30,30,30,30,49};//系数模数
+   // const vector<int> poly_coeffs_2 = {98,60,60,60,60,98};
     Plaintext p_x;//初始输入值明文
     Ciphertext c_x;//初始输入值密文
     Plaintext p_r; //结果明文 
     vector<double> result;//最终结果
-
-    //lnx计算相关。用法建lnx_cal函数。
-    Ciphertext c_m;//拆分输入值密文 
-    Ciphertext c_i;//拆分指数值密文
-    Plaintext p_sign_poly_coeff;//比较大小明文
+    vector<double> plain_coeffs;//加密前的系数
+    vector<Plaintext> coeff_p;//明文状态下的系数
+    vector<Ciphertext> levs;//密文状态下的,展开公式的每一项
+    vector<Ciphertext> levs_ln133;//ln133密文
+    vector<Plaintext> plain_coeffs_ln133;//ln133系数明文
+    //lnx计算相关。用法见lnx_cal函数。
+    Ciphertext c_m;//尾数密文 
+    Ciphertext c_i;//次数密文
+    Plaintext p_m;//尾数明文
+    Plaintext p_i;//次数明文
+    //Plaintext p_sign_poly_coeff;//比较大小明文
    
 
 public:
     utils(int kind,double x)
    { 
-    init(kind);
-    encrypt_input(x,kind);
-    if(kind==1||kind==2)
-    {
-        lnx_cal(c_x,kind);
-        lnx_compare(x);
-    }
+    cout<<"utils 1 used"<<endl;
     
+    }
+    //重载构造函数2：专门为lnx设计
+    utils(int kind,double x,double m,vector<int>suffix_ln133,int accuracy)
+    {
+        init(kind);
+        choose_coeffs(accuracy,kind);
+        encrypt_input_lnx(m,suffix_ln133);
+        lnx_cal(c_m,suffix_ln133[0],kind);
+        lnx_compare(x,kind);
+
     }
 
     ~utils()
@@ -80,7 +93,7 @@ public:
     //以下判断逻辑针对系数模数和缩放因子，根据lnx计算要求设定了专门的系数模数和缩放因子。指数和三角函数运算等其他情况请自行补充
     if(kind==1||kind==2)
     {
-       p_parms->set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree, lnx_poly_coeffs)); 
+       p_parms->set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree, poly_coeffs)); 
        scale=pow(2.0,30);
     }
     p_context =  new SEALContext (*p_parms, true, seal::sec_level_type::tc128);
@@ -93,19 +106,74 @@ public:
     p_decryptor=new Decryptor(*p_context, secret_key);
     p_encoder=new CKKSEncoder(*p_context);
 
-    
-    p_encoder->encode(sign_poly_coeff, scale, p_sign_poly_coeff);
+   
+   // p_encoder->encode(sign_poly_coeff, scale, p_sign_poly_coeff);
 
-   }
+   } 
+
+   void choose_coeffs(int accuracy,int kind)
+    {
+        string name;
+        if(kind==1)
+        {
+            name="COEFFLIST_LNX";
+        }
+        fstream file(name);
+        if(!file.is_open())
+        {
+            cerr<<"无法读取系数文件"<<endl;
+            return ;
+        }
+        string line;
+        double line_number=0;
+        while(line_number<accuracy)
+        {
+            getline(file,line);
+           line_number++;
+        }
+        if(line_number==accuracy)
+        {
+            istringstream iss(line);
+            double num;
+            while(iss>>num)
+            {
+                plain_coeffs.push_back(num);
+            }
+            if((int)plain_coeffs.size()==0)//这时，没有数据，需要自行创建写入
+            {
+                cout<<"系数为空，请检查系数文件"<<endl;
+                return;
+            }
+        }
+        file.close();
+        cout<<"系数为：";
+        for(int i=0;i<(int)plain_coeffs.size();i++)
+        {
+            cout<<plain_coeffs[i]<<"    ";
+        }
+        cout<<endl;
+
+    }
      void encrypt_input(double x,int kind)
         {
-            if(kind==2)
-            {
-                x=1.0/x;
-            }
+            cout<<x<<endl;
             p_encoder->encode(x, scale, p_x);
             p_encryptor->encrypt(p_x, c_x);
         }
+    void encrypt_input_lnx(double m,vector<int>suffix_ln133)
+    {
+        levs_ln133.resize(suffix_ln133.size()-1);
+        int index=1;
+        for(int i=0;i<suffix_ln133[0]+1;i++)
+        {
+            p_encoder->encode(suffix_ln133[index],scale,p_i);
+            p_encryptor->encrypt(p_i,levs_ln133[index-1]);
+            index++;
+        }
+        cout<<"index="<<index<<endl;
+        p_encoder->encode(m,scale,p_m);
+        p_encryptor->encrypt(p_m,c_m);
+    }
     void decrypt_result(Ciphertext c_r,int kind)
     {
         p_decryptor->decrypt(c_r,p_r);
@@ -116,128 +184,135 @@ public:
         }
        
             cout<<"result is "<<result[0]<<endl;
-        
-        
+   
     }
 
-       void lnx_cal( Ciphertext c_x,int kind)
-        {
-            Plaintext coeff_temp_0,coeff_1,coeff_p1,coeff_05,coeff_033,coeff_025,coeff_ln133,p_num_of_ln133;
-            p_encoder->encode(1, scale, coeff_1);
-            p_encoder->encode(1, scale, coeff_temp_0);
-            p_encoder->encode(-0.492, scale, coeff_05);
-            p_encoder->encode(0.235,scale,coeff_033);
-            p_encoder->encode(-0.25,scale,coeff_025);
-            p_encoder->encode(1,scale,coeff_p1);
-            p_encoder->encode(0.287682,scale,coeff_ln133);
-
-            //拆分法：将输入值拆分为：x=m*(4/3)^i;其中拆分输入值m属于0.9~1.2，拆分指数值i属于0~40。
-            Ciphertext c_m;
-            Ciphertext c_check;
-            Plaintext p_pow_2;
-            int index=40;
-            bool overZero=false;
-            while(index>-1)
+       void lnx_cal( Ciphertext c_m,int num,int kind)
+        {   
+            plain_coeffs_ln133.resize(levs_ln133.size());
+            double ln133=0.287432;//0.287682;//改为287432后精确度显著上升，推测是由于计算精度导致
+            int index=0;
+            double devide=pow(10,num/2);
+            if(num%2!=0)
             {
-                p_encoder->encode(1.2*pow(4.0/3.0,index),scale,p_pow_2);
-                p_evaluator->sub_plain(c_x,p_pow_2,c_check);
-                //接下来检查c_check的正负
-                overZero = sign_approx(c_check);
-               
-                if(overZero)
-                {
-                    cout<<"index ="<<index<<", over zero"<<endl;
-                    break;
-                }
-                index-=1;
-                
+                devide*=5;
+                p_encoder->encode(devide*ln133,scale,plain_coeffs_ln133[index]);
+                index++;
+                devide/=5;
             }
-            index+=1;
-            cout<<"index is "<<index<<endl;
-            p_encoder->encode(index,scale,p_num_of_ln133);//拆分出来的ln1.33数量
-            p_encryptor->encrypt(p_num_of_ln133,c_i);
-            cout<<"in1.33 number calculated"<<endl;
+            for(int i=0;i<num/2;i++)
+            {
+                p_encoder->encode(devide*ln133,scale,plain_coeffs_ln133[index]);
+                index++;
+                devide/=2;
+                p_encoder->encode(devide*ln133,scale,plain_coeffs_ln133[index]);
+                index++;
+                devide/=5;
+            }
+            p_encoder->encode(ln133,scale,plain_coeffs_ln133[index]);
+            //cout<<"devide="<<devide<<endl;
+            cout<<"num="<<num<<endl;
+            cout<<"plain_coeffs_ln133 size="<<plain_coeffs_ln133.size()<<endl;
+            cout<<"index="<<index<<endl;
+            coeff_p.resize(plain_coeffs.size());
+            levs.resize(plain_coeffs.size());
+            Plaintext coeff_1,coeff_ln133;
+            Plaintext coeff_0;
+            p_encoder->encode(0, scale, coeff_0);
+            p_encoder->encode(1, scale, coeff_1);
+           // p_encoder->encode(0.287682,scale,coeff_ln133);
+            //
 
-            p_encoder->encode(1.0/pow(4.0/3.0,index),scale,p_pow_2);
-            p_evaluator->multiply_plain(c_x,p_pow_2,c_m);
-            p_evaluator->relinearize_inplace(c_m,relin_keys);
-            p_evaluator->rescale_to_next_inplace(c_m);
-
-          //  decrypt_check(c_m,"c_m");
-            c_m.scale()=scale;
-          //  decrypt_check(c_m,"c_m");
+            for(size_t i=0;i<plain_coeffs.size();i++)
+            {
+                
+                p_encoder->encode(plain_coeffs[i],scale,coeff_p[i]);
+            }
+          
             //c_m泰勒展开
             cout<<"modulus_chain_index of c_m is:"<<p_context->get_context_data(c_m.parms_id())->chain_index()<<endl;
             cout<<"modulus_chain_index of coeff_1 is:"<<p_context->get_context_data(coeff_1.parms_id())->chain_index()<<endl;
-            p_evaluator->mod_switch_to_next_inplace(coeff_1);
+           // p_evaluator->mod_switch_to_next_inplace(coeff_1);
             p_evaluator->sub_plain_inplace(c_m,coeff_1);//m=x-1
 
-          //  decrypt_check(c_m,"c_m");
-            Ciphertext lev1;//泰勒一次项
-            Ciphertext lev2;//泰勒二次项
-            Ciphertext lev3;//泰勒三次项
+            decrypt_check(c_m,"c_m");
             Ciphertext mWith1;//m*1
             Ciphertext m2;//m*m
             Ciphertext suffix;//余项
             cout <<"tyler begin"<<endl;
 
-            p_evaluator->mod_switch_to_next_inplace(coeff_p1);
-            p_evaluator->multiply_plain(c_m,coeff_p1,lev1);
-            p_evaluator->rescale_to_next_inplace(lev1);
-            cout<<"lev1 ready"<<endl;
+           // p_evaluator->mod_switch_to_next_inplace(coeff_p[0]);
+            p_evaluator->multiply_plain(c_m,coeff_p[0],levs[0]);
+            p_evaluator->rescale_to_next_inplace(levs[0]);
+
+            cout<<"levs[0] ready"<<endl;
 
             p_evaluator->multiply_plain(c_m,coeff_1,mWith1);
            // p_evaluator->relinearize_inplace(mWith1,relin_keys);
             p_evaluator->rescale_to_next_inplace(mWith1);
 
-            p_evaluator->mod_switch_to_next_inplace(coeff_05);
-            p_evaluator->multiply_plain(c_m,coeff_05,lev2);
-           // p_evaluator->relinearize_inplace(lev2,relin_keys);
-            p_evaluator->rescale_to_next_inplace(lev2);
+            //p_evaluator->mod_switch_to_next_inplace(coeff_p[1]);
+            p_evaluator->multiply_plain(c_m,coeff_p[1],levs[1]);
+           // p_evaluator->relinearize_inplace(levs[1],relin_keys);
+            p_evaluator->rescale_to_next_inplace(levs[1]);
 
-            p_evaluator->multiply_inplace(lev2,mWith1);
-            p_evaluator->relinearize_inplace(lev2,relin_keys);
-            p_evaluator->rescale_to_next_inplace(lev2);
-            decrypt_check(lev2,"lev2");
-            cout<<"lev2 ready"<<endl;
-            p_evaluator->mod_switch_to_next_inplace(coeff_033);
-            p_evaluator->multiply_plain(c_m,coeff_033,lev3);
-            p_evaluator->rescale_to_next_inplace(lev3);
+            p_evaluator->multiply_inplace(levs[1],mWith1);
+            p_evaluator->relinearize_inplace(levs[1],relin_keys);
+            p_evaluator->rescale_to_next_inplace(levs[1]);
+            decrypt_check(levs[1],"levs[1]");
+            cout<<"levs[1] ready"<<endl;
+           // p_evaluator->mod_switch_to_next_inplace(coeff_p[2]);
+            p_evaluator->multiply_plain(c_m,coeff_p[2],levs[2]);
+            p_evaluator->rescale_to_next_inplace(levs[2]);
 
             p_evaluator->square(c_m,m2);
             p_evaluator->relinearize_inplace(m2,relin_keys);
             p_evaluator->rescale_to_next_inplace(m2);
 
-            p_evaluator->multiply_inplace(lev3,m2);
-            p_evaluator->relinearize_inplace(lev3,relin_keys);
-            p_evaluator->rescale_to_next_inplace(lev3);
-            decrypt_check(lev3,"lev3");
-            cout<<"lev3 ready"<<endl;
+            p_evaluator->multiply_inplace(levs[2],m2);
+            p_evaluator->relinearize_inplace(levs[2],relin_keys);
+            p_evaluator->rescale_to_next_inplace(levs[2]);
+            decrypt_check(levs[2],"levs[2]");
+            cout<<"levs[2] ready"<<endl;
 
-            lev1.scale()=scale;
-            lev2.scale()=scale;
-            lev3.scale()=scale;
+            levs[0].scale()=scale;
+            levs[1].scale()=scale;
+            levs[2].scale()=scale;
 
-            p_evaluator->mod_switch_to_inplace(lev1,lev3.parms_id());
-            cout<<"modulus_chain_index of lev1 is:"<<p_context->get_context_data(lev1.parms_id())->chain_index()<<endl;
-            cout<<"modulus_chain_index of lev3 is:"<<p_context->get_context_data(lev3.parms_id())->chain_index()<<endl;
-            cout<<"modulus_chain_index of lev2 is:"<<p_context->get_context_data(lev2.parms_id())->chain_index()<<endl;
+            p_evaluator->mod_switch_to_inplace(levs[0],levs[2].parms_id());
+            cout<<"modulus_chain_index of levs[0] is:"<<p_context->get_context_data(levs[0].parms_id())->chain_index()<<endl;
+            cout<<"modulus_chain_index of levs[2] is:"<<p_context->get_context_data(levs[2].parms_id())->chain_index()<<endl;
+            cout<<"modulus_chain_index of levs[1] is:"<<p_context->get_context_data(levs[1].parms_id())->chain_index()<<endl;
             Ciphertext c_r;
-            p_evaluator->add(lev2,lev3,c_r);
-            p_evaluator->add_inplace(c_r,lev1);
-            p_evaluator->mod_switch_to_inplace(coeff_ln133,c_i.parms_id());
-            p_evaluator->multiply_plain(c_i,coeff_ln133,suffix);
+            p_evaluator->add(levs[1],levs[2],c_r);
+            p_evaluator->add_inplace(c_r,levs[0]);
+            cout<<"c_r ready"<<endl;
+            p_encryptor->encrypt(coeff_0,suffix);
+            p_evaluator->mod_switch_to_inplace(suffix,levs[0].parms_id());
+            for(size_t i=0;i<plain_coeffs_ln133.size();i++)
+            { //  cout<<plain_coeffs_ln133.size()<<endl;
+            cout<<levs_ln133.size()<<endl;
+                p_evaluator->multiply_plain_inplace(levs_ln133[i],plain_coeffs_ln133[i]);
 
-            p_evaluator->rescale_to_next_inplace(suffix);
+                p_evaluator->rescale_to_next_inplace(levs_ln133[i]);
+                p_evaluator->mod_switch_to_next_inplace(levs_ln133[i]);
+              //  cout<<"modulus_chain_index of levs_ln133[i] is:"<<p_context->get_context_data(levs_ln133[i].parms_id())->chain_index()<<endl;
+             //   cout<<"scale for ln133 is:"<<levs_ln133[i].scale()<<endl;
+              //  cout<<"scale for suffix is:"<<suffix.scale()<<endl;
 
+                levs_ln133[i].scale()=scale;
+                p_evaluator->add_inplace(suffix,levs_ln133[i]);
+                decrypt_check(suffix,"suffix");
+                            }
+
+            cout<<"suffix calculated"<<endl;
             suffix.scale()=scale;
             p_evaluator->mod_switch_to_inplace(suffix,c_r.parms_id());
 
-           // decrypt_check(c_r,"c_r");
-
+            decrypt_check(c_r,"c_r");
             p_evaluator->add_inplace(c_r,suffix); 
             
-           // decrypt_check(suffix,"suffix");
+            
 
             decrypt_result(c_r,kind);  
         }
@@ -253,67 +328,13 @@ void decrypt_check(Ciphertext c,string name)
 }
 
    
-    bool sign_approx(Ciphertext encrypted)
+ 
+    void lnx_compare(double x,int kind)
     {
-        //多项式近似看正负：coeff_0*x+coeff_1*x^2//该方法已经弃用
-        /*
-        vector<double> coeffs={0.987688,-0.161562,0.0};
-        Plaintext coeff_0,coeff_1,coeff_2,p_1;
-        p_encoder->encode(coeffs[0],scale,coeff_0);
-        p_encoder->encode(coeffs[1],scale,coeff_1);
-        p_encoder->encode(coeffs[2],scale,coeff_2);
-        p_encoder->encode(1,scale,p_1);
-
-        Ciphertext temp;
-        p_evaluator->multiply_plain(encrypted,coeff_0,temp);
-        p_evaluator->relinearize_inplace(temp,relin_keys);
-        p_evaluator->rescale_to_next_inplace(temp);//k1*x
-
-        Ciphertext temp2,temp3;
-        p_evaluator->multiply_plain(encrypted,coeff_1,temp2);
-        p_evaluator->relinearize_inplace(temp2,relin_keys);
-        p_evaluator->rescale_to_next_inplace(temp2);
-
-        p_evaluator->multiply_plain(encrypted,p_1,temp3);
-        p_evaluator->relinearize_inplace(temp3,relin_keys);
-        p_evaluator->rescale_to_next_inplace(temp3);
-
-        p_evaluator->multiply_inplace(temp2,temp3);
-        p_evaluator->relinearize_inplace(temp2,relin_keys);
-        p_evaluator->rescale_to_next_inplace(temp2);
-
-        p_evaluator->mod_switch_to_inplace(temp,temp2.parms_id());
-        p_evaluator->mod_switch_to_inplace(coeff_2,temp.parms_id());
-        temp.scale()=pow(2.0,40);
-        temp2.scale()=pow(2.0,40);
-   
-        p_evaluator->add_inplace(temp,temp2);
-        p_evaluator->add_plain_inplace(temp,coeff_2);
-
-        Plaintext p_result;
-        p_decryptor->decrypt(temp,p_result);
-        vector<double> result,result2;
-        p_encoder->decode(p_result,result);
-        cout<<"result is "<<result[0]<<endl;
-        return result[0]>0;
-        */
-        //方法2：乘以一个系数，再解密看正负。
-
-        p_evaluator->multiply_plain_inplace(encrypted,p_sign_poly_coeff);
-        p_evaluator->relinearize_inplace(encrypted,relin_keys);
-        p_evaluator->rescale_to_next_inplace(encrypted);
-
-         Plaintext p_result;
-        p_decryptor->decrypt(encrypted,p_result);
-        vector<double> result,result2;
-        p_encoder->decode(p_result,result);
-        cout<<"result is "<<result[0]<<endl;
-        return result[0]>0;
-
-    }
-
-    void lnx_compare(double x)
-    {
+        if(kind==2)
+        {
+            x=1.0/x;
+        }
         double true_result=log(x);
         cout<<"true result is "<<true_result<<endl;
         double wucha=abs((true_result-result[0])/true_result);
