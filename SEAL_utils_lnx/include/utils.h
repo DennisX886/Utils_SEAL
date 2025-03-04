@@ -17,9 +17,11 @@ using namespace seal;
         void encrypt_input(double x,int kind):变量加密函数，可以将输入变量x加密为密文。输入值为初始输入值x和模式kind.需要注意的是，只能用于加密x变量，不能用于加密其他变量。
         void decrypt_result(Ciphertext c_r,int kind):结果解密函数，可以将密文解密，并打印。输入值为密文c_r和模式kind.
         void decrypt_check(Ciphertext c,string name):变量解密函数，可以解密任意密文并打印结果，用于检查加密情况。输入值为密文c和密文名称name.
-        bool sign_approx(Ciphertext encrypted):正负判断函数，可以判断输入变量是否为正数，如果为正数则返回true,如果为0或者负数则返回false。输入值为密文encrypted.//删除弃用
         void lnx_cal(Ciphertext c_m,Ciphertext c_i,int kind):lnx计算函数，可以根据输入值近似计算并打印对应lnx的值。输入值为密文c_m\c_i和模式kind.
         void lnx_compare(double x):lnx计算结果比较函数，可以计算真实结果和相对误差，并打印。输入值为初始输入值x.
+        void encrypt_input_lnx(double m,vector<int>suffix_ln133):专门用于对数运算的加密函数，接受对数运算传入的参数。
+        void choose_coeffs(int accuracy,int kind)：用于读取文件系数的函数。输入为精度和类型
+        void check_text(t t_r,string name):用于检查模数转换链索引和缩放因子大小的函数。输入为明文或密文对象，以及他们的名字（用于打印显示）
     
 
 */
@@ -49,13 +51,13 @@ class utils
     vector<double> plain_coeffs;//加密前的系数
     vector<Plaintext> coeff_p;//明文状态下的系数
     vector<Ciphertext> levs;//密文状态下的,展开公式的每一项
-    vector<Ciphertext> levs_ln133;//ln133密文
-    vector<Plaintext> plain_coeffs_ln133;//ln133系数明文
+    vector<Ciphertext> levs_ln133;//尾数多项式密文
+    vector<Plaintext> plain_coeffs_ln133;//拆分出来的尾数多项式
     //lnx计算相关。用法见lnx_cal函数。
     Ciphertext c_m;//尾数密文 
-    Ciphertext c_i;//次数密文
+    Ciphertext c_i;//次数密文，现在弃用
     Plaintext p_m;//尾数明文
-    Plaintext p_i;//次数明文
+    Plaintext p_i;//次数明文，现在用于过渡数据
     //Plaintext p_sign_poly_coeff;//比较大小明文
    
 
@@ -233,13 +235,13 @@ public:
             Ciphertext mWith1;//m*1
             Ciphertext m2;//m*m
             Ciphertext suffix;//余项
-            cout <<"tyler begin"<<endl;
+          //  cout <<"tyler begin"<<endl;
 
            // p_evaluator->mod_switch_to_next_inplace(coeff_p[0]);
             p_evaluator->multiply_plain(c_m,coeff_p[0],levs[0]);
             p_evaluator->rescale_to_next_inplace(levs[0]);
 
-            cout<<"levs[0] ready"<<endl;
+          //  cout<<"levs[0] ready"<<endl;
 if(accuracy>=2)
 {
      p_evaluator->multiply_plain(c_m,coeff_1,mWith1);
@@ -255,7 +257,7 @@ if(accuracy>=2)
             p_evaluator->relinearize_inplace(levs[1],relin_keys);
             p_evaluator->rescale_to_next_inplace(levs[1]);
            // decrypt_check(levs[1],"levs[1]");
-            cout<<"levs[1] ready"<<endl;
+        //    cout<<"levs[1] ready"<<endl;
 }
 if(accuracy>=3)
 {
@@ -271,9 +273,45 @@ if(accuracy>=3)
             p_evaluator->relinearize_inplace(levs[2],relin_keys);
             p_evaluator->rescale_to_next_inplace(levs[2]);
            // decrypt_check(levs[2],"levs[2]");
-            cout<<"levs[2] ready"<<endl;
+         //   cout<<"levs[2] ready"<<endl;
+}  
+check_text(m2,"m2");
+check_text(c_m,"c_m");
+check_text(coeff_1,"coeff_1");
+check_text(levs[2],"levs[2]");
+if(accuracy>=4)
+{
+    p_evaluator->multiply_plain(c_m,coeff_p[3],levs[3]);
+    p_evaluator->rescale_to_next_inplace(levs[3]);
+
+    p_evaluator->multiply_inplace(levs[3],m2);
+    p_evaluator->relinearize_inplace(levs[3],relin_keys);
+    p_evaluator->rescale_to_next_inplace(levs[3]);
+
+    Ciphertext c_m_help=c_m;
+    p_evaluator->mod_switch_to_inplace(c_m_help,levs[3].parms_id());
+
+    p_evaluator->multiply_inplace(levs[3],c_m_help);
+    p_evaluator->relinearize_inplace(levs[3],relin_keys);
+    p_evaluator->rescale_to_next_inplace(levs[3]);
+
+}    
+if(accuracy>=5)
+{
+    p_evaluator->multiply_plain(c_m,coeff_p[4],levs[4]);
+    p_evaluator->rescale_to_next_inplace(levs[4]);
+
+    p_evaluator->multiply_inplace(levs[4],m2);
+    p_evaluator->relinearize_inplace(levs[4],relin_keys);
+    p_evaluator->rescale_to_next_inplace(levs[4]);
+
+    Ciphertext m2_help=m2;
+    p_evaluator->mod_switch_to_inplace(m2_help,levs[4].parms_id());
+
+    p_evaluator->multiply_inplace(levs[4],m2_help);
+    p_evaluator->relinearize_inplace(levs[4],relin_keys);
+    p_evaluator->rescale_to_next_inplace(levs[4]);
 }      
-           
 
         //    levs[0].scale()=scale;
         //    levs[1].scale()=scale;
@@ -311,26 +349,28 @@ if(accuracy>=3)
                 }
             }
 
-            cout<<"c_r ready"<<endl;
+          //  cout<<"c_r ready"<<endl;
             p_encryptor->encrypt(coeff_0,suffix);
             p_evaluator->mod_switch_to_inplace(suffix,levs[0].parms_id());
            
-           check_text(levs[0],"levs[0]");
+        //   check_text(levs[0],"levs[0]");
             for(size_t i=0;i<plain_coeffs_ln133.size();i++)
             { 
             cout<<levs_ln133.size()<<endl;
-      //    cout<<"modulus_chain_index of levs_ln133[i] is:"<<p_context->get_context_data(levs_ln133[i].parms_id())->chain_index()<<endl;
-      //    cout<<"modulus_chain_index of plain_coeffs_ln133[i] is:"<<p_context->get_context_data(plain_coeffs_ln133[i].parms_id())->chain_index()<<endl;
+         // cout<<"modulus_chain_index of levs_ln133[i] is:"<<p_context->get_context_data(levs_ln133[i].parms_id())->chain_index()<<endl;
+         // cout<<"modulus_chain_index of plain_coeffs_ln133[i] is:"<<p_context->get_context_data(plain_coeffs_ln133[i].parms_id())->chain_index()<<endl;
                 p_evaluator->multiply_plain_inplace(levs_ln133[i],plain_coeffs_ln133[i]);
 
                 p_evaluator->rescale_to_next_inplace(levs_ln133[i]);
                 if(accuracy!=1)
                 {
-                    p_evaluator->mod_switch_to_next_inplace(levs_ln133[i]); 
+                    p_evaluator->mod_switch_to_inplace(levs_ln133[i],suffix.parms_id()); 
                 }
+                check_text(levs_ln133[i],"levs_ln133[i]");
+                check_text(suffix,"suffix");
                 levs_ln133[i].scale()=scale;
                 p_evaluator->add_inplace(suffix,levs_ln133[i]);
-                decrypt_check(suffix,"suffix");
+               // decrypt_check(suffix,"suffix");
                             }
 
             cout<<"suffix calculated"<<endl;
@@ -354,8 +394,8 @@ void decrypt_check(Ciphertext c,string name)
     template <typename T>
    void check_text( T t_r,string name)
    {
-        cout<<"scale of "<<name<<"is:"<<t_r.scale()<<endl;
-        cout<<"modulus chain index of "<<name<<"is:"<<p_context->get_context_data(t_r.parms_id())->chain_index()<<endl;
+        cout<<"scale of "<<name<<" is:"<<t_r.scale()<<endl;
+        cout<<"modulus chain index of "<<name<<" is:"<<p_context->get_context_data(t_r.parms_id())->chain_index()<<endl;
    }
  
     void lnx_compare(double x,int kind)
