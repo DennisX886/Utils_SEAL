@@ -71,7 +71,7 @@ public:
         init(kind);
         choose_coeffs(accuracy,kind);
         encrypt_input_lnx(m,suffix_ln133);
-        lnx_cal(c_m,suffix_ln133[0],kind);
+        lnx_cal(c_m,suffix_ln133[0],kind,accuracy);
         lnx_compare(x,kind);
 
     }
@@ -105,10 +105,6 @@ public:
     p_encryptor=new Encryptor(*p_context, public_key);
     p_decryptor=new Decryptor(*p_context, secret_key);
     p_encoder=new CKKSEncoder(*p_context);
-
-   
-   // p_encoder->encode(sign_poly_coeff, scale, p_sign_poly_coeff);
-
    } 
 
    void choose_coeffs(int accuracy,int kind)
@@ -187,7 +183,7 @@ public:
    
     }
 
-       void lnx_cal( Ciphertext c_m,int num,int kind)
+       void lnx_cal( Ciphertext c_m,int num,int kind,int accuracy)
         {   
             plain_coeffs_ln133.resize(levs_ln133.size());
             double ln133=0.287432;//0.287682;//改为287432后精确度显著上升，推测是由于计算精度导致
@@ -221,7 +217,6 @@ public:
             p_encoder->encode(0, scale, coeff_0);
             p_encoder->encode(1, scale, coeff_1);
            // p_encoder->encode(0.287682,scale,coeff_ln133);
-            //
 
             for(size_t i=0;i<plain_coeffs.size();i++)
             {
@@ -235,7 +230,6 @@ public:
            // p_evaluator->mod_switch_to_next_inplace(coeff_1);
             p_evaluator->sub_plain_inplace(c_m,coeff_1);//m=x-1
 
-            decrypt_check(c_m,"c_m");
             Ciphertext mWith1;//m*1
             Ciphertext m2;//m*m
             Ciphertext suffix;//余项
@@ -246,8 +240,9 @@ public:
             p_evaluator->rescale_to_next_inplace(levs[0]);
 
             cout<<"levs[0] ready"<<endl;
-
-            p_evaluator->multiply_plain(c_m,coeff_1,mWith1);
+if(accuracy>=2)
+{
+     p_evaluator->multiply_plain(c_m,coeff_1,mWith1);
            // p_evaluator->relinearize_inplace(mWith1,relin_keys);
             p_evaluator->rescale_to_next_inplace(mWith1);
 
@@ -259,9 +254,12 @@ public:
             p_evaluator->multiply_inplace(levs[1],mWith1);
             p_evaluator->relinearize_inplace(levs[1],relin_keys);
             p_evaluator->rescale_to_next_inplace(levs[1]);
-            decrypt_check(levs[1],"levs[1]");
+           // decrypt_check(levs[1],"levs[1]");
             cout<<"levs[1] ready"<<endl;
-           // p_evaluator->mod_switch_to_next_inplace(coeff_p[2]);
+}
+if(accuracy>=3)
+{
+    // p_evaluator->mod_switch_to_next_inplace(coeff_p[2]);
             p_evaluator->multiply_plain(c_m,coeff_p[2],levs[2]);
             p_evaluator->rescale_to_next_inplace(levs[2]);
 
@@ -272,34 +270,64 @@ public:
             p_evaluator->multiply_inplace(levs[2],m2);
             p_evaluator->relinearize_inplace(levs[2],relin_keys);
             p_evaluator->rescale_to_next_inplace(levs[2]);
-            decrypt_check(levs[2],"levs[2]");
+           // decrypt_check(levs[2],"levs[2]");
             cout<<"levs[2] ready"<<endl;
+}      
+           
 
-            levs[0].scale()=scale;
-            levs[1].scale()=scale;
-            levs[2].scale()=scale;
+        //    levs[0].scale()=scale;
+        //    levs[1].scale()=scale;
+        //    levs[2].scale()=scale;
+            for(int i=0;i<accuracy;i++)
+            {
+                levs[i].scale()=scale;
+                if(levs[i].parms_id()!=levs[accuracy-1].parms_id())
+                {
+                    p_evaluator->mod_switch_to_inplace(levs[i],levs[accuracy-1].parms_id());
+                }
+            }
 
-            p_evaluator->mod_switch_to_inplace(levs[0],levs[2].parms_id());
-            cout<<"modulus_chain_index of levs[0] is:"<<p_context->get_context_data(levs[0].parms_id())->chain_index()<<endl;
-            cout<<"modulus_chain_index of levs[2] is:"<<p_context->get_context_data(levs[2].parms_id())->chain_index()<<endl;
-            cout<<"modulus_chain_index of levs[1] is:"<<p_context->get_context_data(levs[1].parms_id())->chain_index()<<endl;
+       //     p_evaluator->mod_switch_to_inplace(levs[0],levs[accuracy-1].parms_id());
+     //       cout<<"modulus_chain_index of levs[0] is:"<<p_context->get_context_data(levs[0].parms_id())->chain_index()<<endl;
+      //      cout<<"modulus_chain_index of levs[2] is:"<<p_context->get_context_data(levs[2].parms_id())->chain_index()<<endl;
+      //      cout<<"modulus_chain_index of levs[1] is:"<<p_context->get_context_data(levs[1].parms_id())->chain_index()<<endl;
             Ciphertext c_r;
-            p_evaluator->add(levs[1],levs[2],c_r);
-            p_evaluator->add_inplace(c_r,levs[0]);
+            for(int i=0;i<accuracy;i++)
+            {
+                cout<<"i="<<i<<endl;
+                if(i==0&&accuracy==1)
+                {
+
+                c_r=levs[0];
+                }
+                else if(i==0)
+                {
+                    p_evaluator->add(levs[0],levs[1],c_r);
+                    i++;
+                }
+                else
+                {
+                    p_evaluator->add_inplace(c_r,levs[i]);
+                }
+            }
+
             cout<<"c_r ready"<<endl;
             p_encryptor->encrypt(coeff_0,suffix);
             p_evaluator->mod_switch_to_inplace(suffix,levs[0].parms_id());
+           
+           check_text(levs[0],"levs[0]");
             for(size_t i=0;i<plain_coeffs_ln133.size();i++)
-            { //  cout<<plain_coeffs_ln133.size()<<endl;
+            { 
             cout<<levs_ln133.size()<<endl;
+      //    cout<<"modulus_chain_index of levs_ln133[i] is:"<<p_context->get_context_data(levs_ln133[i].parms_id())->chain_index()<<endl;
+      //    cout<<"modulus_chain_index of plain_coeffs_ln133[i] is:"<<p_context->get_context_data(plain_coeffs_ln133[i].parms_id())->chain_index()<<endl;
                 p_evaluator->multiply_plain_inplace(levs_ln133[i],plain_coeffs_ln133[i]);
 
                 p_evaluator->rescale_to_next_inplace(levs_ln133[i]);
-                p_evaluator->mod_switch_to_next_inplace(levs_ln133[i]);
-              //  cout<<"modulus_chain_index of levs_ln133[i] is:"<<p_context->get_context_data(levs_ln133[i].parms_id())->chain_index()<<endl;
-             //   cout<<"scale for ln133 is:"<<levs_ln133[i].scale()<<endl;
-              //  cout<<"scale for suffix is:"<<suffix.scale()<<endl;
-
+                if(accuracy!=1)
+                {
+                    p_evaluator->mod_switch_to_next_inplace(levs_ln133[i]); 
+                }
                 levs_ln133[i].scale()=scale;
                 p_evaluator->add_inplace(suffix,levs_ln133[i]);
                 decrypt_check(suffix,"suffix");
@@ -311,9 +339,6 @@ public:
 
             decrypt_check(c_r,"c_r");
             p_evaluator->add_inplace(c_r,suffix); 
-            
-            
-
             decrypt_result(c_r,kind);  
         }
 
@@ -326,8 +351,12 @@ void decrypt_check(Ciphertext c,string name)
             //string name=GET_NAME(c);
             cout<<name<<"="<<res3[0]<<endl;
 }
-
-   
+    template <typename T>
+   void check_text( T t_r,string name)
+   {
+        cout<<"scale of "<<name<<"is:"<<t_r.scale()<<endl;
+        cout<<"modulus chain index of "<<name<<"is:"<<p_context->get_context_data(t_r.parms_id())->chain_index()<<endl;
+   }
  
     void lnx_compare(double x,int kind)
     {
