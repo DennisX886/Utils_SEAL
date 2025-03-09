@@ -17,7 +17,7 @@ using namespace seal;
         void encrypt_input(double x,int kind):变量加密函数，可以将输入变量x加密为密文。输入值为初始输入值x和模式kind.需要注意的是，只能用于加密x变量，不能用于加密其他变量。
         void decrypt_result(Ciphertext c_r,int kind):结果解密函数，可以将密文解密，并打印。输入值为密文c_r和模式kind.
         void decrypt_check(Ciphertext c,string name):变量解密函数，可以解密任意密文并打印结果，用于检查加密情况。输入值为密文c和密文名称name.
-        void lnx_cal(Ciphertext c_m,Ciphertext c_i,int kind):lnx计算函数，可以根据输入值近似计算并打印对应lnx的值。输入值为密文c_m\c_i和模式kind.
+        void lnx_cal(Ciphertext c_m,Ciphertext c_i,int kind，double ln_num):lnx计算函数，可以根据输入值近似计算并打印对应lnx的值。输入值为密文c_m\c_i,模式kind和后缀的lnx的值ln_num.
         void lnx_compare(double x):lnx计算结果比较函数，可以计算真实结果和相对误差，并打印。输入值为初始输入值x.
         void encrypt_input_lnx(double m,vector<int>suffix_ln133):专门用于对数运算的加密函数，接受对数运算传入的参数。
         void choose_coeffs(int accuracy,int kind)：用于读取文件系数的函数。输入为精度和类型
@@ -68,12 +68,12 @@ public:
     
     }
     //重载构造函数2：专门为lnx设计
-    utils(int kind,double x,double m,vector<int>suffix_ln133,int accuracy)
+    utils(int kind,double x,double m,vector<int>suffix_ln133,int accuracy,double ln_num)
     {
         init(kind);
         choose_coeffs(accuracy,kind);
         encrypt_input_lnx(m,suffix_ln133);
-        lnx_cal(c_m,suffix_ln133[0],kind,accuracy);
+        lnx_cal(c_m,suffix_ln133[0],kind,accuracy,ln_num);
         lnx_compare(x,kind);
 
     }
@@ -112,7 +112,8 @@ public:
    void choose_coeffs(int accuracy,int kind)
     {
         string name;
-        if(kind==1)
+        cout<<"kind="<<kind<<endl;
+        if(kind==1||kind==2)
         {
             name="COEFFLIST_LNX";
         }
@@ -185,29 +186,29 @@ public:
    
     }
 
-       void lnx_cal( Ciphertext c_m,int num,int kind,int accuracy)
+       void lnx_cal( Ciphertext c_m,int num,int kind,int accuracy,double ln_num)
         {   
             plain_coeffs_ln133.resize(levs_ln133.size());
-            double ln133=0.287432;//0.287682;//改为287432后精确度显著上升，推测是由于计算精度导致
+            //double ln133=0.287432;//0.287682;//改为287432后精确度显著上升，推测是由于计算精度导致
             int index=0;
             double devide=pow(10,num/2);
             if(num%2!=0)
             {
                 devide*=5;
-                p_encoder->encode(devide*ln133,scale,plain_coeffs_ln133[index]);
+                p_encoder->encode(devide*ln_num,scale,plain_coeffs_ln133[index]);
                 index++;
                 devide/=5;
             }
             for(int i=0;i<num/2;i++)
             {
-                p_encoder->encode(devide*ln133,scale,plain_coeffs_ln133[index]);
+                p_encoder->encode(devide*ln_num,scale,plain_coeffs_ln133[index]);
                 index++;
                 devide/=2;
-                p_encoder->encode(devide*ln133,scale,plain_coeffs_ln133[index]);
+                p_encoder->encode(devide*ln_num,scale,plain_coeffs_ln133[index]);
                 index++;
                 devide/=5;
             }
-            p_encoder->encode(ln133,scale,plain_coeffs_ln133[index]);
+            p_encoder->encode(ln_num,scale,plain_coeffs_ln133[index]);
             //cout<<"devide="<<devide<<endl;
             cout<<"num="<<num<<endl;
             cout<<"plain_coeffs_ln133 size="<<plain_coeffs_ln133.size()<<endl;
@@ -275,10 +276,10 @@ if(accuracy>=3)
            // decrypt_check(levs[2],"levs[2]");
          //   cout<<"levs[2] ready"<<endl;
 }  
-check_text(m2,"m2");
-check_text(c_m,"c_m");
-check_text(coeff_1,"coeff_1");
-check_text(levs[2],"levs[2]");
+//check_text(m2,"m2");
+//check_text(c_m,"c_m");
+//check_text(coeff_1,"coeff_1");
+//check_text(levs[2],"levs[2]");
 if(accuracy>=4)
 {
     p_evaluator->multiply_plain(c_m,coeff_p[3],levs[3]);

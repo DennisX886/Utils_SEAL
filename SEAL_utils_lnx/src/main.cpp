@@ -2,6 +2,9 @@
 #include"nlopt_cal.h"
 #include <unistd.h>
 using namespace std;
+#define LOW_LNX 0.9
+#define HIGH_LNX 1.2
+#define ln_LNX 0.287679
 //说明
 //作者G3解天行，版本1.
 //功能：加密计算lnx函数
@@ -27,7 +30,7 @@ using namespace std;
 /*修改：2025.3.3设计了精度算法，支持0～3,后续可能添加3～5或3～7*/
 /*修改：2025.3.4 添加了3～5的精度选择模式。关于为什么只添加到5,请参考具体说明
     后续：优化代码，增加可读性和健壮性，减少精度影响*/
-
+/*修改：2025.3.8 将区间的修改的相关数值改为define，方便修改；更正了一些bug*/
 vector<int> break_suffix(int x)
 {
     vector<int> suffix;
@@ -104,7 +107,7 @@ cin>>accuracy;
               cout<<"input out of scale"<<endl;
              return 0;
               }
-            if(x<=0.9)
+            if(x<=LOW_LNX)
             {
                 kind=2;
                 x=1.0/x;
@@ -121,15 +124,17 @@ cin>>accuracy;
       //创建utils实体
     if(kind==1||kind==2)
     {
+        double ln_num=ln_LNX;
          m=x;
             while(true)
             {
                 
-                if(m>=0.9&&m<=1.2)
+                if(m>=LOW_LNX&&m<=HIGH_LNX)
                 {
                     break;
                 }
-                m=m/1.333;
+                m=m/(HIGH_LNX/LOW_LNX);
+               // cout<<"HIGH_LNX/LOW_LNX="<<HIGH_LNX/LOW_LNX<<endl;
                 i+=1;
             }
             cout<<"i="<<i<<endl;
@@ -141,7 +146,7 @@ cin>>accuracy;
 
     }
     
-    utils utils(kind,x,m,suffix,accuracy);
+    utils utils(kind,x,m,suffix,accuracy,ln_num);
     }
    // menu();
 
