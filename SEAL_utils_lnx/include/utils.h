@@ -4,7 +4,9 @@
 #include<vector>
 #include<cmath>
 #include<fstream>
- 
+
+#define EXP_UP_LIMIT 500
+#define EXP_LOW_LIMIT -500
 using namespace std;
 using namespace seal;
 //说明
@@ -30,7 +32,7 @@ class utils
 
    private:
     EncryptionParameters *p_parms;
-    size_t poly_modulus_degree=8192;
+    size_t poly_modulus_degree=16384;//8192;
     //size_t poly_modulus_degree_2=16284;
     SEALContext * p_context ;//上下文指针
     KeyGenerator * p_keygen;//密钥生成器指针
@@ -42,8 +44,9 @@ class utils
     RelinKeys relin_keys;//线性化密钥
     double scale;//缩放因子
    // double sign_poly_coeff=0.763546;//比较大小参数
-    const vector<int> poly_coeffs = {49,30,30,30,30,49};//系数模数
-   // const vector<int> poly_coeffs_2 = {98,60,60,60,60,98};
+    const vector<int> poly_coeffs_lnx = {60,40,40,40,40,60};//{49,30,30,30,30,49};///系数模数
+    const vector<int> poly_coeffs_tri = {50,30,30,30,30,30,30,30,30,30,50};//支持9次连续乘法
+   //const vector<int> poly_coeffs_2 = {98,60,60,60,60,98};
     Plaintext p_x;//初始输入值明文
     Ciphertext c_x;//初始输入值密文
     Plaintext p_r; //结果明文 
@@ -62,16 +65,21 @@ class utils
    
 
 public:
-    utils(int kind,double x)
+//重载构造函数1：专门为三角函数设计
+    utils(int kind,double x,int k,int accuracy,int lable)
    { 
-    cout<<"utils 1 used"<<endl;
+    init(kind);
+    choose_coeffs(accuracy,kind,0);
+    encrypt_input(x);
+    cosx_cal(kind,k,accuracy,lable);
+    tri_compare(x,kind);
     
     }
     //重载构造函数2：专门为lnx设计
     utils(int kind,double x,double m,vector<int>suffix_ln133,int accuracy,double ln_num)
     {
         init(kind);
-        choose_coeffs(accuracy,kind);
+        choose_coeffs(accuracy,kind,0);
         encrypt_input_lnx(m,suffix_ln133);
         lnx_cal(c_m,suffix_ln133[0],kind,accuracy,ln_num);
         lnx_compare(x,kind);
@@ -95,27 +103,42 @@ public:
     //以下判断逻辑针对系数模数和缩放因子，根据lnx计算要求设定了专门的系数模数和缩放因子。指数和三角函数运算等其他情况请自行补充
     if(kind==1||kind==2)
     {
-       p_parms->set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree, poly_coeffs)); 
-       scale=pow(2.0,30);
+       p_parms->set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree, poly_coeffs_lnx)); 
+       scale=pow(2.0,poly_coeffs_lnx[1]);
+    }
+    else if(kind==3||kind==4)
+    {
+        p_parms->set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree,poly_coeffs_tri));
+        scale = pow(2.0,poly_coeffs_tri[1]);
+ //       p_parms->set_decomposition_bit_count(60);
     }
     p_context =  new SEALContext (*p_parms, true, seal::sec_level_type::tc128);
     p_keygen= new KeyGenerator(*p_context);
     auto secret_key=p_keygen->secret_key();
     p_keygen->create_public_key(public_key);
     p_keygen->create_relin_keys(relin_keys);
+   // relin_keys=p_keygen->create_relin_keys(3,false);
     p_evaluator=new Evaluator(*p_context);
     p_encryptor=new Encryptor(*p_context, public_key);
     p_decryptor=new Decryptor(*p_context, secret_key);
     p_encoder=new CKKSEncoder(*p_context);
    } 
 
-   void choose_coeffs(int accuracy,int kind)
+   void choose_coeffs(int accuracy,int kind,int x_)
     {
         string name;
         cout<<"kind="<<kind<<endl;
         if(kind==1||kind==2)
         {
             name="COEFFLIST_LNX";
+        }
+        else if(kind==3||kind==4)
+        {
+            name ="COEFFLIST_TRI";
+        }
+        else if(kind==5)
+        {
+            name="COEFFLIST_EXP";
         }
         fstream file(name);
         if(!file.is_open())
@@ -125,12 +148,21 @@ public:
         }
         string line;
         double line_number=0;
-        while(line_number<accuracy)
+        int limit=0;
+        if(kind!=5)
+        {
+            limit = accuracy;
+        }
+        else
+        {
+            limit = (accuracy-1)*(EXP_UP_LIMIT-EXP_LOW_LIMIT)+(x_-EXP_LOW_LIMIT);
+        }
+        while(line_number<limit)
         {
             getline(file,line);
            line_number++;
         }
-        if(line_number==accuracy)
+        if(line_number==limit)
         {
             istringstream iss(line);
             double num;
@@ -138,10 +170,10 @@ public:
             {
                 plain_coeffs.push_back(num);
             }
-            if((int)plain_coeffs.size()==0)//这时，没有数据，需要自行创建写入
+            if((int)plain_coeffs.size()==0)//这时，没有数据，需要自行创建写入.现在只有指数函数算法支持该功能，但是还没更新上
             {
-                cout<<"系数为空，请检查系数文件"<<endl;
-                return;
+             //   cout<<"系数为空，请检查系数文件"<<endl;
+            //    return;
             }
         }
         file.close();
@@ -153,7 +185,7 @@ public:
         cout<<endl;
 
     }
-     void encrypt_input(double x,int kind)
+     void encrypt_input(double x)
         {
             cout<<x<<endl;
             p_encoder->encode(x, scale, p_x);
@@ -181,15 +213,119 @@ public:
         {
             result[0]=-result[0];
         }
+        
        
             cout<<"result is "<<result[0]<<endl;
    
     }
+    void cosx_cal(int kind,int k,int accuracy,int lable)
+    {
+        //首先计算折半之后的值，然后按照折半次数翻回去
+        //准备明文
+        coeff_p.resize(plain_coeffs.size());
+        levs.resize(plain_coeffs.size());
+        for(int i=0;i<(int)plain_coeffs.size();i++)
+        {
+            p_encoder->encode(plain_coeffs[i],scale,coeff_p[i]);
+        }
+        cout<<"plaintext 1 ready"<<endl;
+        Plaintext plain_coeff_3,plain_coeff_4,plain_coeff_1,plain_coeff_minus1;
+        p_encoder->encode(-3,scale,plain_coeff_3);
+        p_encoder->encode(4,scale,plain_coeff_4);
+        p_encoder->encode(plain_coeffs[0],scale,plain_coeff_1);
+        p_encoder->encode(-1*plain_coeffs[0],scale,plain_coeff_minus1);
+        cout<<"plaintext 2 ready"<<endl;
+        Ciphertext xWith1,x2,xWithMinus1;
+        //泰勒计算
+        p_encryptor->encrypt(plain_coeff_1,levs[0]);//一阶
+        cout<<"lev[0] ready"<<endl;
+        if(accuracy>=2)
+        {
 
+            p_evaluator->multiply_plain(c_x,coeff_p[1],levs[1]);
+            p_evaluator->rescale_to_next_inplace(levs[1]);
+            p_evaluator->multiply_plain(c_x,plain_coeff_1,xWithMinus1);
+
+            p_evaluator->rescale_to_next_inplace(xWithMinus1); 
+                       cout<<"-x ready"<<endl;
+            p_evaluator->multiply_inplace(levs[1],xWithMinus1);
+            p_evaluator->relinearize_inplace(levs[1],relin_keys);
+            p_evaluator->rescale_to_next_inplace(levs[1]);
+
+            check_text(levs[1],"levs[1]");
+        }
+        if(accuracy>=3)
+        {
+            p_evaluator->multiply_plain(c_x,coeff_p[2],levs[2]);
+            p_evaluator->rescale_to_next_inplace(levs[2]);
+            p_evaluator->multiply_plain(c_x,plain_coeff_1,xWith1);
+            p_evaluator->rescale_to_next_inplace(xWith1);
+            p_evaluator->multiply_inplace(levs[2],xWith1);
+            p_evaluator->relinearize_inplace(levs[2],relin_keys);
+            p_evaluator->rescale_to_next_inplace(levs[2]);
+            p_evaluator->multiply(xWithMinus1,xWithMinus1,x2);
+            p_evaluator->relinearize_inplace(x2,relin_keys);
+            p_evaluator->rescale_to_next_inplace(x2);
+            p_evaluator->multiply_inplace(levs[2],x2);
+            p_evaluator->relinearize_inplace(levs[2],relin_keys);
+            p_evaluator->rescale_to_next_inplace(levs[2]);
+
+            check_text(levs[2],"levs[2]");
+        }
+
+        //计算泰勒的相加
+        for(int i=0;i<accuracy;i++)
+        {
+            levs[i].scale()=scale;
+            if(levs[i].parms_id()!=levs[accuracy-1].parms_id())
+            {
+                p_evaluator->mod_switch_to_inplace(levs[i],levs[accuracy-1].parms_id());
+            }
+            
+        }
+        Ciphertext tyler_result;
+        tyler_result=levs[0];
+        for(int i=1;i<(int)levs.size();i++)
+        {
+            p_evaluator->add_inplace(tyler_result,levs[i]);
+        }
+        
+        //接下来使用三倍角公式放大
+        Ciphertext t2,three1,three2,three0;
+        
+        three0=tyler_result;
+        Ciphertext big;
+        
+        for(int i=0;i<k;i++)
+        {   
+            p_evaluator->mod_switch_to_inplace(plain_coeff_3,three0.parms_id());
+            p_evaluator->mod_switch_to_inplace(plain_coeff_4,three0.parms_id());
+
+            p_evaluator->multiply_plain(three0,plain_coeff_3,three2);
+            p_evaluator->rescale_to_next_inplace(three2);
+
+            p_evaluator->multiply_plain(three0,plain_coeff_4,three1);
+            p_evaluator->rescale_to_next_inplace(three1);
+            p_evaluator->multiply(three0,three0,t2);
+            p_evaluator->relinearize_inplace(t2,relin_keys);
+            p_evaluator->rescale_to_next_inplace(t2);
+            p_evaluator->multiply_inplace(three1,t2);
+
+            three1.scale()=scale;
+            three2.scale()=scale;
+            p_evaluator->mod_switch_to_inplace(three2,three1.parms_id());
+
+            p_evaluator->add(three1,three2,three0);
+
+            check_text(three0,"three0");
+        }
+        decrypt_result(three0,lable);
+
+    }
        void lnx_cal( Ciphertext c_m,int num,int kind,int accuracy,double ln_num)
         {   
             plain_coeffs_ln133.resize(levs_ln133.size());
-            //double ln133=0.287432;//0.287682;//改为287432后精确度显著上升，推测是由于计算精度导致
+
             int index=0;
             double devide=pow(10,num/2);
             if(num%2!=0)
@@ -276,10 +412,7 @@ if(accuracy>=3)
            // decrypt_check(levs[2],"levs[2]");
          //   cout<<"levs[2] ready"<<endl;
 }  
-//check_text(m2,"m2");
-//check_text(c_m,"c_m");
-//check_text(coeff_1,"coeff_1");
-//check_text(levs[2],"levs[2]");
+
 if(accuracy>=4)
 {
     p_evaluator->multiply_plain(c_m,coeff_p[3],levs[3]);
@@ -410,7 +543,18 @@ void decrypt_check(Ciphertext c,string name)
         double wucha=abs((true_result-result[0])/true_result);
         cout<<"相对误差："<<wucha*100<<"%"<<endl;
     }
+ void   tri_compare(double x,int kind)
+    {
+        double true_result;
+        double wucha;
 
+         true_result = cos(x);
+            
+ 
+        cout<<"true result is: "<<true_result<<endl;
+            wucha =abs((true_result - result[0])/true_result);
+            cout<<"相对误差："<<wucha*100<<"%"<<endl;
+    }
 
 };
 
