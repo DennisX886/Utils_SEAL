@@ -39,6 +39,10 @@ using namespace std;
 /*修改：2025.3.19修改系数模数，精确度进一步提升。继续开发三角函数算法,部分改造了接口，使其适应多种算法*/
 /*修改：2025.3.21 三角函数算法报错：重现性化密钥长度不足。不会解决。mlgbd。*/
 /*修改：2025.3.21 晚：完善了三角函数算法，现在接口上支持正弦和余弦了。但是重现性化密钥长度还是不足。搞不定。妈蛋。·修改了choose_coeffs函数，为之后指数函数添加了接口*/
+/*修改：2025.3.22 ：重现性化问题解决。现在痛点在误差。小误差被不断的乘法放的很大。家人们谁懂*/
+/*修改：2025.3.23 ：总之先实现指数算法*/
+/*修改：2025.3.25 ：计划有变，先完善三角函数算法。*/
+/*修改：2025.3.26 ：三角函数算法已初步实现。接下来是重新准备表格，扩展阶数*/
 vector<int> break_suffix(int x)
 {
     vector<int> suffix;
@@ -83,19 +87,31 @@ double angle_reduction(double x,int &lable) {
     int q = static_cast<int>(x / two_pi + 0.5);
     x= x - q * two_pi;  // 归约到-pai,pai
     //规约到-pai,pai;
+    if(x>0.5*PI)
+    {
+        x=PI-x;
+        lable=2;//适应dercypt_result
+    }
+    else if(x<-0.5*PI)
+    {
+        x=-1*PI-x;
+        lable=2;
+    
+    }
     return x;
 }
 //计算折半次数,按照3倍角折合1/3
-int half_break(double x)
-{
-     int k = 0;
-    double y = x < 0 ? -x : x;
-    while (y > THRESHOLD && k < MAX_ITER) {
-        y /= 3.0;
-        k++;
-    }
-    return k;
-}
+// int half_break(double &x)
+// {
+//      int k = 0;
+//      x = x < 0 ? -x : x;
+//     while (x > THRESHOLD && k < MAX_ITER) {
+//         x /= 3.0;
+//         k++;
+//     }
+//     cout<<"k="<<k<<endl;
+//     return k;
+// }
 //main函数。调用计算函数
 void menu()//一个打印当前工作目录的函数
 {
@@ -122,7 +138,7 @@ int main(int argc, char *argv[])
 cin>>accuracy;
    double m=0;
             int i=0;
-    int k=0;//三角函数折半次数
+   // int k=0;//三角函数折半次数
     int lable =0;
     //lnx 范围：0.9～1.2*1.333^40(119324.79……)(kind 1)，1/119235～0.9(kind 2)//2025.2.21修改后：并入到kind1中
    //根据模式判断输入数值的合法性
@@ -146,12 +162,19 @@ cin>>accuracy;
             //其他模式，如指数函数计算模式和三角函数计算模式等，请自行补充设计
         case 3://模式3,计算余弦函数
             x=angle_reduction(x,lable);
-             k=half_break(x);
+  //           k=half_break(x);
             break;
         case 4://模式4，计算正弦函数
             x=x-0.5*PI;
             x=angle_reduction(x,lable);
-            k=half_break(x);
+ //           k=half_break(x);
+            break;
+        case 5:
+            if(x<-700||x>680)
+            {
+                cout<<"invalid input"<<endl;
+                return 0;
+            }
             break;
         default:
             cout<<"input error"<<endl;
@@ -186,7 +209,11 @@ cin>>accuracy;
     }
     else if(kind==3||kind==4)
     {
-        utils(kind,x,k,accuracy,lable);
+        utils(kind,x,accuracy,lable);
+    }
+    else if(kind==5)
+    {
+        utils(kind,x,accuracy);
     }
    // menu();
 

@@ -5,8 +5,10 @@
 #include<cmath>
 #include<fstream>
 
-#define EXP_UP_LIMIT 500
-#define EXP_LOW_LIMIT -500
+#define EXP_UP_LIMIT 680
+#define EXP_LOW_LIMIT 0
+#define TRI_UP_LIMIT 16
+#define TRI_LOW_LIMIT -16
 using namespace std;
 using namespace seal;
 //说明
@@ -27,6 +29,66 @@ using namespace seal;
     
 
 */
+//指数函数找系数系列程序//现在用不上
+//计算切比雪夫节点
+vector<double>chebishefu_nodes(double a, double b, int N) {
+    vector<double>nodes(N);
+    for (int i = 0; i < N; i++) {
+        nodes[i] = 0.5 * (a + b) + 0.5 * (b - a) * cos((2 * i + 1) * M_PI / (2 * N));
+    }
+    return nodes;
+}
+
+//计算范德蒙矩阵
+vector<vector<double> >vandermon(const vector<double>& x, int N) {
+    int n = x.size();
+    vector<vector<double> > V(n, vector<double>(N));
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < N; j++) {
+            V[i][j] = pow(x[i], j);
+        }
+    }
+    return V;
+}
+
+vector<double>Deal(vector<vector<double> >& A, vector<double>& b) {
+    int n = A.size();
+    vector<double> x(n);
+
+    for (int i = 0; i < n; i++) {
+        double pivot = A[i][i];
+        for (int j = i; j < n; j++) {
+            A[i][j] /= pivot;
+        }
+        b[i] /= pivot;
+        for (int k = i + 1; k < n; k++) {
+            double factor = A[k][i];
+            for (int j = i; j < n; j++) {
+                A[k][j] -= factor * A[i][j];
+            }
+            b[k] -= factor * b[i];
+        }
+    }
+    for (int i = n - 1; i >= 0; i--) {
+        x[i] = b[i];
+        for (int j = i + 1; j < n; j++) {
+            x[i] -= A[i][j] * x[j];
+        }
+    }
+
+    return x;
+}
+
+vector<double> remez(double a, double b, int N) {
+    int n = N + 1;
+    vector<double>x = chebishefu_nodes(a, b, n);
+    vector<vector<double> >V = vandermon(x, n);
+    vector<double>f(n);
+    for (int i = 0; i < n; i++) {
+        f[i] = exp(x[i]);
+    }
+    return Deal(V, f);
+}
 class utils
 {
 
@@ -45,7 +107,9 @@ class utils
     double scale;//缩放因子
    // double sign_poly_coeff=0.763546;//比较大小参数
     const vector<int> poly_coeffs_lnx = {60,40,40,40,40,60};//{49,30,30,30,30,49};///系数模数
-    const vector<int> poly_coeffs_tri = {50,30,30,30,30,30,30,30,30,30,50};//支持9次连续乘法
+    const vector<int> poly_coeffs_tri = {60,40,40,40,60};//支持9次连续乘法
+    const vector<int> poly_coeffs_tri_2 = {60,35,35,35,35,35,35,35,35,35,60};
+    const vector<int> poly_coeffs_exp = {60,40,40,40,40,60};
    //const vector<int> poly_coeffs_2 = {98,60,60,60,60,98};
     Plaintext p_x;//初始输入值明文
     Ciphertext c_x;//初始输入值密文
@@ -66,26 +130,34 @@ class utils
 
 public:
 //重载构造函数1：专门为三角函数设计
-    utils(int kind,double x,int k,int accuracy,int lable)
+    utils(int kind,double x,int accuracy,int lable)
    { 
     init(kind);
-    choose_coeffs(accuracy,kind,0);
+    double a=x*10;
+    a=(int)a*0.1;
+    double b=a+0.1;
+    cout<<"a="<<a<<endl;
+    choose_coeffs(accuracy,kind,a,b);
     encrypt_input(x);
-    cosx_cal(kind,k,accuracy,lable);
-    tri_compare(x,kind);
+    cosx_cal(kind,accuracy,lable);
+    tri_compare(x,kind,lable);
     
     }
     //重载构造函数2：专门为lnx设计
     utils(int kind,double x,double m,vector<int>suffix_ln133,int accuracy,double ln_num)
     {
         init(kind);
-        choose_coeffs(accuracy,kind,0);
+        choose_coeffs(accuracy,kind,0,0);
         encrypt_input_lnx(m,suffix_ln133);
         lnx_cal(c_m,suffix_ln133[0],kind,accuracy,ln_num);
         lnx_compare(x,kind);
 
     }
-
+    utils(int kind,double x,int accuracy)//重载构造函数3,专门为指数函数设计
+    {
+        init(kind);
+        choose_coeffs(accuracy,kind,0,0);
+    }
     ~utils()
     {
         delete p_parms;
@@ -112,6 +184,11 @@ public:
         scale = pow(2.0,poly_coeffs_tri[1]);
  //       p_parms->set_decomposition_bit_count(60);
     }
+    else if(kind==5)
+    {
+        p_parms->set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree,poly_coeffs_exp));
+        scale = pow(2.0,poly_coeffs_exp[1]);
+    }
     p_context =  new SEALContext (*p_parms, true, seal::sec_level_type::tc128);
     p_keygen= new KeyGenerator(*p_context);
     auto secret_key=p_keygen->secret_key();
@@ -124,7 +201,7 @@ public:
     p_encoder=new CKKSEncoder(*p_context);
    } 
 
-   void choose_coeffs(int accuracy,int kind,int x_)
+   void choose_coeffs(int accuracy,int kind,double a,double b)
     {
         string name;
         cout<<"kind="<<kind<<endl;
@@ -149,14 +226,19 @@ public:
         string line;
         double line_number=0;
         int limit=0;
-        if(kind!=5)
+        if(kind==1||kind==2)
         {
             limit = accuracy;
         }
+        else if(kind==5)
+        {
+            limit = (accuracy-1)*(EXP_UP_LIMIT-EXP_LOW_LIMIT+1)+a-0+1;
+        }
         else
         {
-            limit = (accuracy-1)*(EXP_UP_LIMIT-EXP_LOW_LIMIT)+(x_-EXP_LOW_LIMIT);
+            limit = (accuracy-1)*(TRI_UP_LIMIT-TRI_LOW_LIMIT+1)+10*a+16+1;;
         }
+        cout<<"limit="<<limit<<endl;
         while(line_number<limit)
         {
             getline(file,line);
@@ -170,8 +252,15 @@ public:
             {
                 plain_coeffs.push_back(num);
             }
-            if((int)plain_coeffs.size()==0)//这时，没有数据，需要自行创建写入.现在只有指数函数算法支持该功能，但是还没更新上
+            if((int)plain_coeffs.size()==0)//这时，没有数据，需要自行创建写入.现在只有指数函数算法支持该功能，但是还没更新上。得了后面再实现吧，没必要
             {
+              //  if(kind==5)
+              //  {
+              //      int down_limti = x_;
+              //      int up_limit=x_+1;
+              //      plain_coeffs=remez(down_limti,up_limit,accuracy);
+
+               // }
              //   cout<<"系数为空，请检查系数文件"<<endl;
             //    return;
             }
@@ -218,108 +307,221 @@ public:
             cout<<"result is "<<result[0]<<endl;
    
     }
-    void cosx_cal(int kind,int k,int accuracy,int lable)
+    void cosx_cal(int kind,int accuracy,int lable)
     {
-        //首先计算折半之后的值，然后按照折半次数翻回去
-        //准备明文
         coeff_p.resize(plain_coeffs.size());
         levs.resize(plain_coeffs.size());
-        for(int i=0;i<(int)plain_coeffs.size();i++)
-        {
-            p_encoder->encode(plain_coeffs[i],scale,coeff_p[i]);
-        }
-        cout<<"plaintext 1 ready"<<endl;
-        Plaintext plain_coeff_3,plain_coeff_4,plain_coeff_1,plain_coeff_minus1;
-        p_encoder->encode(-3,scale,plain_coeff_3);
-        p_encoder->encode(4,scale,plain_coeff_4);
-        p_encoder->encode(plain_coeffs[0],scale,plain_coeff_1);
-        p_encoder->encode(-1*plain_coeffs[0],scale,plain_coeff_minus1);
-        cout<<"plaintext 2 ready"<<endl;
-        Ciphertext xWith1,x2,xWithMinus1;
-        //泰勒计算
-        p_encryptor->encrypt(plain_coeff_1,levs[0]);//一阶
-        cout<<"lev[0] ready"<<endl;
-        if(accuracy>=2)
-        {
+         for(int i=0;i<(int)plain_coeffs.size();i++)
+         {
+             p_encoder->encode(plain_coeffs[i],scale,coeff_p[i]);
+         }
+         cout<<"plaintext 1 ready"<<endl;
 
+         Plaintext coeff_p_1;
+         p_encoder->encode(1,scale,coeff_p_1);
+         cout<<"plaintext 2 ready"<<endl;
+         Ciphertext xWith1,x2,x4;
+
+         p_encryptor->encrypt(coeff_p[0],levs[0]);
+         cout<<"levs0 ready"<<endl;
+
+         if(accuracy>=1)
+         {
             p_evaluator->multiply_plain(c_x,coeff_p[1],levs[1]);
             p_evaluator->rescale_to_next_inplace(levs[1]);
-            p_evaluator->multiply_plain(c_x,plain_coeff_1,xWithMinus1);
+            decrypt_check(levs[1],"levs[1]");
+         }
 
-            p_evaluator->rescale_to_next_inplace(xWithMinus1); 
-                       cout<<"-x ready"<<endl;
-            p_evaluator->multiply_inplace(levs[1],xWithMinus1);
-            p_evaluator->relinearize_inplace(levs[1],relin_keys);
-            p_evaluator->rescale_to_next_inplace(levs[1]);
-
-            check_text(levs[1],"levs[1]");
-        }
-        if(accuracy>=3)
-        {
+         if(accuracy>=2)
+         {
             p_evaluator->multiply_plain(c_x,coeff_p[2],levs[2]);
             p_evaluator->rescale_to_next_inplace(levs[2]);
-            p_evaluator->multiply_plain(c_x,plain_coeff_1,xWith1);
+
+            p_evaluator->multiply_plain(c_x,coeff_p_1,xWith1);
             p_evaluator->rescale_to_next_inplace(xWith1);
+
             p_evaluator->multiply_inplace(levs[2],xWith1);
             p_evaluator->relinearize_inplace(levs[2],relin_keys);
             p_evaluator->rescale_to_next_inplace(levs[2]);
-            p_evaluator->multiply(xWithMinus1,xWithMinus1,x2);
+            decrypt_check(levs[2],"levs[2]");
+         }
+
+         if(accuracy>=3)
+         {
+            p_evaluator->multiply_plain(c_x,coeff_p[3],levs[3]);
+            p_evaluator->rescale_to_next_inplace(levs[3]);
+
+            p_evaluator->multiply(c_x,c_x,x2);
             p_evaluator->relinearize_inplace(x2,relin_keys);
             p_evaluator->rescale_to_next_inplace(x2);
-            p_evaluator->multiply_inplace(levs[2],x2);
-            p_evaluator->relinearize_inplace(levs[2],relin_keys);
-            p_evaluator->rescale_to_next_inplace(levs[2]);
 
-            check_text(levs[2],"levs[2]");
+            p_evaluator->multiply_inplace(levs[3],x2);
+            p_evaluator->relinearize_inplace(levs[3],relin_keys);
+            p_evaluator->rescale_to_next_inplace(levs[3]);
+            decrypt_check(levs[3],"levs[3]");
+         }
+
+        if(accuracy>=4)
+        {
+            p_evaluator->multiply_plain(c_x,coeff_p[4],levs[4]);
+            p_evaluator->rescale_to_next_inplace(levs[4]);
+
+            p_evaluator->multiply_inplace(levs[4],x2);
+            p_evaluator->relinearize_inplace(levs[4],relin_keys);
+            p_evaluator->rescale_to_next_inplace(levs[4]);
+
+            Ciphertext c_x_help = c_x;
+            p_evaluator->mod_switch_to_inplace(c_x_help,levs[4].parms_id());
+
+            p_evaluator->multiply_inplace(levs[4],c_x_help);
+            p_evaluator->relinearize_inplace(levs[4],relin_keys);
+            p_evaluator->rescale_to_next_inplace(levs[4]);
+            decrypt_check(levs[4],"levs[4]");
+        }
+        if(accuracy>=5)
+        {
+            p_evaluator->multiply_plain(c_x,coeff_p[5],levs[5]);
+            p_evaluator->rescale_to_next_inplace(levs[5]);
+
+            p_evaluator->multiply(x2,x2,x4);
+            p_evaluator->relinearize_inplace(x4,relin_keys);
+            p_evaluator->rescale_to_next_inplace(x4);
+
+            p_evaluator->mod_switch_to_inplace(levs[5],x4.parms_id());
+
+            p_evaluator->multiply_inplace(levs[5],x4);
+            p_evaluator->relinearize_inplace(levs[5],relin_keys);
+            p_evaluator->rescale_to_next_inplace(levs[5]);
+
+            decrypt_check(levs[5],"levs[5]");
         }
 
-        //计算泰勒的相加
-        for(int i=0;i<accuracy;i++)
+    //计算泰勒的相加
+        for(int i=0;i<accuracy+1;i++)
         {
             levs[i].scale()=scale;
-            if(levs[i].parms_id()!=levs[accuracy-1].parms_id())
+            if(levs[i].parms_id()!=levs[accuracy].parms_id())
             {
-                p_evaluator->mod_switch_to_inplace(levs[i],levs[accuracy-1].parms_id());
+                p_evaluator->mod_switch_to_inplace(levs[i],levs[accuracy].parms_id());
             }
-            
         }
-        Ciphertext tyler_result;
-        tyler_result=levs[0];
-        for(int i=1;i<(int)levs.size();i++)
+        Ciphertext c_r=levs[0];
+        for(int i=1;i<accuracy+1;i++)
         {
-            p_evaluator->add_inplace(tyler_result,levs[i]);
+            p_evaluator->add_inplace(c_r,levs[i]);
         }
+        decrypt_result(c_r,lable);
+
+        // //首先计算折半之后的值，然后按照折半次数翻回去
+        // //准备明文
+        // //decrypt_check(c_x,"c_x");
+        // //修改逻辑：利用雷米字算法逼近
+        //coeff_p.resize(plain_coeffs.size());
+        //levs.resize(plain_coeffs.size());
+        //  for(int i=0;i<(int)plain_coeffs.size();i++)
+        //  {
+        //      p_encoder->encode(plain_coeffs[i],scale,coeff_p[i]);
+        //  }
+        //  cout<<"plaintext 1 ready"<<endl;
+        // Plaintext plain_coeff_3,plain_coeff_4,plain_coeff_1,plain_coeff_minus1;
+        // p_encoder->encode(-3,scale,plain_coeff_3);
+        // p_encoder->encode(4,scale,plain_coeff_4);
+        // p_encoder->encode(plain_coeffs[0],scale,plain_coeff_1);
+        // p_encoder->encode(-1*plain_coeffs[0],scale,plain_coeff_minus1);
+        // cout<<"plaintext 2 ready"<<endl;
+        // Ciphertext xWith1,x2,xWithMinus1;
+        // //泰勒计算
+        // p_encryptor->encrypt(plain_coeff_1,levs[0]);//一阶
+        // cout<<"lev[0] ready"<<endl;
+        // if(accuracy>=2)
+        // {
+
+        //     p_evaluator->multiply_plain(c_x,coeff_p[1],levs[1]);
+        //     p_evaluator->rescale_to_next_inplace(levs[1]);
+        //     p_evaluator->multiply_plain(c_x,plain_coeff_1,xWithMinus1);
+
+        //     p_evaluator->rescale_to_next_inplace(xWithMinus1); 
+        //                cout<<"-x ready"<<endl;
+        //     p_evaluator->multiply_inplace(levs[1],xWithMinus1);
+        //     p_evaluator->relinearize_inplace(levs[1],relin_keys);
+        //     p_evaluator->rescale_to_next_inplace(levs[1]);
+
+        //  //   check_text(levs[1],"levs[1]");
+        //     decrypt_check(levs[1],"levs[1]");
+        // }
+        // if(accuracy>=3)
+        // {
+        //     p_evaluator->multiply_plain(c_x,coeff_p[2],levs[2]);
+        //     p_evaluator->rescale_to_next_inplace(levs[2]);
+        //     p_evaluator->multiply_plain(c_x,plain_coeff_1,xWith1);
+        //     p_evaluator->rescale_to_next_inplace(xWith1);
+        //     p_evaluator->multiply_inplace(levs[2],xWith1);
+        //     p_evaluator->relinearize_inplace(levs[2],relin_keys);
+        //     p_evaluator->rescale_to_next_inplace(levs[2]);
+        //     p_evaluator->multiply(xWithMinus1,xWithMinus1,x2);
+        //     p_evaluator->relinearize_inplace(x2,relin_keys);
+        //     p_evaluator->rescale_to_next_inplace(x2);
+        //     p_evaluator->multiply_inplace(levs[2],x2);
+        //     p_evaluator->relinearize_inplace(levs[2],relin_keys);
+        //     p_evaluator->rescale_to_next_inplace(levs[2]);
+
+        // //    check_text(levs[2],"levs[2]");
+        //     decrypt_check(levs[2],"levs[2]");
+        // }
+
+        // //计算泰勒的相加
+        // for(int i=0;i<accuracy;i++)
+        // {
+        //     levs[i].scale()=scale;
+        //     if(levs[i].parms_id()!=levs[accuracy-1].parms_id())
+        //     {
+        //         p_evaluator->mod_switch_to_inplace(levs[i],levs[accuracy-1].parms_id());
+        //     }
+            
+        // }
         
-        //接下来使用三倍角公式放大
-        Ciphertext t2,three1,three2,three0;
+        // Ciphertext tyler_result;
+        // tyler_result=levs[0];
+        // for(int i=1;i<(int)levs.size();i++)
+        // {
+        //     p_evaluator->add_inplace(tyler_result,levs[i]);
+        // }
+        // decrypt_check(tyler_result,"tyler_result");
+        // //接下来使用三倍角公式放大
+        // Ciphertext t2,three1,three2,three0;
         
-        three0=tyler_result;
-        Ciphertext big;
+        // three0=tyler_result;
+        // Ciphertext big;
         
-        for(int i=0;i<k;i++)
-        {   
-            p_evaluator->mod_switch_to_inplace(plain_coeff_3,three0.parms_id());
-            p_evaluator->mod_switch_to_inplace(plain_coeff_4,three0.parms_id());
+        // for(int i=0;i<k;i++)
+        // {   
+        //     p_evaluator->mod_switch_to_inplace(plain_coeff_3,three0.parms_id());
+        //     p_evaluator->mod_switch_to_inplace(plain_coeff_4,three0.parms_id());
 
-            p_evaluator->multiply_plain(three0,plain_coeff_3,three2);
-            p_evaluator->rescale_to_next_inplace(three2);
+        //     p_evaluator->multiply_plain(three0,plain_coeff_3,three2);
+        //     p_evaluator->rescale_to_next_inplace(three2);
+        //     decrypt_check(three2,"three2");
 
-            p_evaluator->multiply_plain(three0,plain_coeff_4,three1);
-            p_evaluator->rescale_to_next_inplace(three1);
-            p_evaluator->multiply(three0,three0,t2);
-            p_evaluator->relinearize_inplace(t2,relin_keys);
-            p_evaluator->rescale_to_next_inplace(t2);
-            p_evaluator->multiply_inplace(three1,t2);
+        //     p_evaluator->multiply_plain(three0,plain_coeff_4,three1);
+        //     p_evaluator->rescale_to_next_inplace(three1);
+        //     p_evaluator->multiply(three0,three0,t2);
+        //     p_evaluator->relinearize_inplace(t2,relin_keys);
+        //     p_evaluator->rescale_to_next_inplace(t2);
+        //     p_evaluator->multiply_inplace(three1,t2);
+        //     p_evaluator->relinearize_inplace(three1,relin_keys);
+        //     p_evaluator->rescale_to_next_inplace(three1);
+        //     decrypt_check(three1,"three1");
 
-            three1.scale()=scale;
-            three2.scale()=scale;
-            p_evaluator->mod_switch_to_inplace(three2,three1.parms_id());
+        //     three1.scale()=scale;
+        //     three2.scale()=scale;
+        //     p_evaluator->mod_switch_to_inplace(three2,three1.parms_id());
 
-            p_evaluator->add(three1,three2,three0);
+        //     p_evaluator->add(three1,three2,three0);
 
-            check_text(three0,"three0");
-        }
-        decrypt_result(three0,lable);
+        //   //  check_text(three0,"three0");
+        //     decrypt_check(three0,"three0");
+        // }
+        // decrypt_result(three0,lable);
 
     }
        void lnx_cal( Ciphertext c_m,int num,int kind,int accuracy,double ln_num)
@@ -543,12 +745,16 @@ void decrypt_check(Ciphertext c,string name)
         double wucha=abs((true_result-result[0])/true_result);
         cout<<"相对误差："<<wucha*100<<"%"<<endl;
     }
- void   tri_compare(double x,int kind)
+ void   tri_compare(double x,int kind,int lable)
     {
         double true_result;
-        double wucha;
-
-         true_result = cos(x);
+        double wucha; 
+        true_result = cos(x);
+        if(lable==2)
+        {
+            true_result = -true_result;
+        }
+        
             
  
         cout<<"true result is: "<<true_result<<endl;
