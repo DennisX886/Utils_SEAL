@@ -9,6 +9,7 @@ using namespace std;
 #define PI 3.14159265358979323846
 #define THRESHOLD 0.12
 #define MAX_ITER 3
+#define EXP_BREAK 4
 //说明
 //作者G3解天行，版本1.
 //功能：加密计算lnx函数
@@ -42,7 +43,8 @@ using namespace std;
 /*修改：2025.3.22 ：重现性化问题解决。现在痛点在误差。小误差被不断的乘法放的很大。家人们谁懂*/
 /*修改：2025.3.23 ：总之先实现指数算法*/
 /*修改：2025.3.25 ：计划有变，先完善三角函数算法。*/
-/*修改：2025.3.26 ：三角函数算法已初步实现。接下来是重新准备表格，扩展阶数*/
+/*修改：2025.3.26 ：三角函数算法已初步实现。接下来是重新准备表格，扩展阶数。扩展阶数成功。指数函数算法误差过大，怀疑是由于加密数据过大导致的*/
+/*修改：2025.3.27 ：指数误差初步推断是由于时局过大，导致缩放因子不足，数据被截断导致.笑点在于精度越低效果越好。现在想到的一个办法是求次方来保证精度。但是难点在于数据始终不能过大。解决办法是把部分数据放到外面*/
 vector<int> break_suffix(int x)
 {
     vector<int> suffix;
@@ -122,6 +124,7 @@ void menu()//一个打印当前工作目录的函数
         std::cerr << "无法获取当前工作目录！" << std::endl;
     }
 }
+
 int main(int argc, char *argv[])
 {
     //输入
@@ -130,14 +133,15 @@ int main(int argc, char *argv[])
     double x;
 
     cin>>x;
-    cout<<"input mode: 1 for lnx,3 for cosx,4 for sinx"<<endl;
+    cout<<"input mode: 1 for lnx,3 for cosx,4 for sinx,5 for exp"<<endl;
     int kind;
     int accuracy;
     cin>>kind;
-    cout<<"input accuracy,1~8"<<endl;
+    cout<<"input accuracy,1~5"<<endl;
 cin>>accuracy;
    double m=0;
             int i=0;
+            int time=0;
    // int k=0;//三角函数折半次数
     int lable =0;
     //lnx 范围：0.9～1.2*1.333^40(119324.79……)(kind 1)，1/119235～0.9(kind 2)//2025.2.21修改后：并入到kind1中
@@ -170,10 +174,20 @@ cin>>accuracy;
  //           k=half_break(x);
             break;
         case 5:
-            if(x<-700||x>680)
+            if(x<-680||x>680)
             {
                 cout<<"invalid input"<<endl;
                 return 0;
+            }
+            while(x>60)
+            {
+                x/=4;
+                time++;
+            }
+            if(x<0)
+            {
+                lable=1;
+                x=-x;
             }
             break;
         default:
@@ -213,7 +227,7 @@ cin>>accuracy;
     }
     else if(kind==5)
     {
-        utils(kind,x,accuracy);
+        utils(kind,lable,x,accuracy,time);
     }
    // menu();
 
