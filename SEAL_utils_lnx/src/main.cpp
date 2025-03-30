@@ -51,6 +51,7 @@ vector<int> break_suffix(int x)
     //转换为string判断位数：
     string str = to_string(x);
     int weishu= str.length();
+    cout<<"weishu="<<weishu<<endl;
     //分解
     int time=(weishu-1)*2;
     int devide = pow(10, weishu -1);
@@ -186,7 +187,7 @@ cin>>accuracy;
             }
             if(x<0)
             {
-                lable=1;
+                lable=6;
                 x=-x;
             }
             break;

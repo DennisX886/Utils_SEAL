@@ -48,7 +48,7 @@ class utils
     RelinKeys relin_keys;//线性化密钥
     double scale;//缩放因子
    // double sign_poly_coeff=0.763546;//比较大小参数
-    const vector<int> poly_coeffs_lnx = {60,40,40,40,40,60};//{49,30,30,30,30,49};///系数模数
+    const vector<int> poly_coeffs_lnx = {60,40,40,40,40,40,60};//{49,30,30,30,30,49};///系数模数
     const vector<int> poly_coeffs_tri = {60,40,40,40,60};
     const vector<int> poly_coeffs_exp = {60,50,50,50,50,50,50,60};
    //const vector<int> poly_coeffs_2 = {98,60,60,60,60,98};
@@ -182,7 +182,7 @@ public:
         }
         else
         {
-            limit = (accuracy-1)*(TRI_UP_LIMIT-TRI_LOW_LIMIT+1)+10*a-10*TRI_LOW_LIMIT+1;;
+            limit = (accuracy-1)*(TRI_UP_LIMIT-TRI_LOW_LIMIT+1)+10*a-TRI_LOW_LIMIT+1;
         }
         cout<<"limit="<<limit<<endl;
         while(line_number<limit)
@@ -248,7 +248,7 @@ public:
         {
             result[0]=-result[0];
         }
-        if(kind==1)
+        if(kind==6)
         {
             result[0]=1.0/result[0];
         }
@@ -606,7 +606,6 @@ public:
             p_encoder->encode(ln_num,scale,plain_coeffs_ln133[index]);
             //cout<<"devide="<<devide<<endl;
             cout<<"num="<<num<<endl;
-            cout<<"plain_coeffs_ln133 size="<<plain_coeffs_ln133.size()<<endl;
             cout<<"index="<<index<<endl;
             coeff_p.resize(plain_coeffs.size());
             levs.resize(plain_coeffs.size());
@@ -623,8 +622,7 @@ public:
             }
           
             //c_m泰勒展开
-            cout<<"modulus_chain_index of c_m is:"<<p_context->get_context_data(c_m.parms_id())->chain_index()<<endl;
-            cout<<"modulus_chain_index of coeff_1 is:"<<p_context->get_context_data(coeff_1.parms_id())->chain_index()<<endl;
+
            // p_evaluator->mod_switch_to_next_inplace(coeff_1);
             p_evaluator->sub_plain_inplace(c_m,coeff_1);//m=x-1
 
@@ -759,11 +757,12 @@ if(accuracy>=5)
                 {
                     p_evaluator->mod_switch_to_inplace(levs_ln133[i],suffix.parms_id()); 
                 }
-                check_text(levs_ln133[i],"levs_ln133[i]");
-                check_text(suffix,"suffix");
+           //    check_text(levs_ln133[i],"levs_ln133[i]");
+          //      check_text(suffix,"suffix");
+          decrypt_check(levs_ln133[i],"levs_ln133[i]");
                 levs_ln133[i].scale()=scale;
                 p_evaluator->add_inplace(suffix,levs_ln133[i]);
-               // decrypt_check(suffix,"suffix");
+                decrypt_check(suffix,"suffix");
                             }
 
             cout<<"suffix calculated"<<endl;
@@ -832,7 +831,7 @@ void exp_compare(double x,int lable,int time)
 {
     double true_result;
     double wucha;
-    if(lable==1)
+    if(lable==6)
     {
         x=-x;
     }
